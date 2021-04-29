@@ -1,0 +1,44 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN">
+<html lang="tw">
+<head>
+    <title>news - {{ date }}</title>
+</head>
+<body>
+{% for item in news %}
+<table width="100%" border="0" cellspacing="0" cellpadding="5">
+    <tbody>
+    <tr>
+        <td width="2%" bgcolor="#f59f05">
+            &nbsp;
+        </td>
+        <td width="94%" align="left" valign="top" bgcolor="#ebebeb">
+                    <span style="font-size:22px;color:#0068b7;font-weight:bold;line-height:24px">
+                        {{ item.title }}&nbsp;</span>({{ end_date }})
+        </td>
+        <td width="4%">&nbsp;
+        </td>
+    </tr>
+    </tbody>
+</table>
+
+<table width="100%" border="0" cellpadding="2" cellspacing="0">
+    <tbody>
+    {% for value in item.news %}
+    <tr>
+        <td width="34" valign="top" bgcolor="#FFFFFF" align="right"><span
+                style="font-size:18px;color:#000099;font-weight:bold"></span>&nbsp;
+        </td>
+        <td align="left" bgcolor="#FFFFFF"><a
+                href="{{ value.url }}"
+                style="font-size:18px;color:#3c3c3c;font-weight:normal;text-decoration:none" target="_blank">{{ value.title }}</a>
+            <span style="font-size:80%">({{ value.date }})</span>
+        </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+</table>
+
+<a name="m_-192852720251811847_cate1"></a><br>
+{% endfor %}
+</body>
+</html>
