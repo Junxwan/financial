@@ -4,11 +4,16 @@ import time
 import glob
 import logging
 import smtplib
+import pymysql
 import crawler.twse as twse
 import crawler.price as price
 import crawler.cmoney as cmoney
 import crawler.news as cnews
 import pandas as pd
+from model import models
+from sqlalchemy.orm import Session
+from sqlalchemy import create_engine
+from configparser import ConfigParser
 from datetime import datetime, timedelta
 from xlsx import twse as xtwse
 from jinja2 import Template
@@ -48,6 +53,10 @@ if month == 1:
     month = 12
 else:
     month = month - 1
+
+conf = ConfigParser()
+conf.read('config.ini')
+
 
 @click.group()
 def cli():
@@ -250,7 +259,8 @@ def sp500(code, out):
 @click.option('-h', '--hours', type=click.INT, help="小時")
 @click.option('-l', '--login_email', type=click.STRING, help="發送者")
 @click.option('-p', '--login_pwd', type=click.STRING, help="發送密碼")
-def news(email, hours, login_email, login_pwd):
+@click.option('-s', '--save', type=click.BOOL, help="是否保存在db")
+def news(email, hours, login_email, login_pwd, save=False):
     log('start news')
 
     date = (datetime.now() - timedelta(hours=hours)).strftime("%Y-%m-%d %H:%M:%S")
@@ -285,6 +295,35 @@ def news(email, hours, login_email, login_pwd):
     ]
 
     log('get news ok')
+
+    if save:
+        db = conf['databases']
+        engine = create_engine(f"mysql+pymysql://{db['user']}:{db['password']}@{db['host']}:{db['port']}/{db['table']}",
+                               encoding='utf8')
+        source = {}
+        for v in engine.execute(models.source.select()).all():
+            source[v['name']] = v['id']
+
+        insert = []
+        for item in data:
+            if item[0] not in source or len(item[1]) == 0:
+                continue
+
+            for v in item[1]:
+                insert.append({
+                    'source_id': source[item[0]],
+                    'title': v['title'],
+                    'url': v['url'],
+                    'publish_time': v['date']
+                })
+
+        session = Session(engine)
+        result = session.execute(models.news.insert(), insert)
+
+        if result.is_insert == False or result.rowcount != len(insert):
+            log('insert error ' + date.__str__())
+        else:
+            session.commit()
 
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
@@ -382,6 +421,7 @@ def render(html, **kwargs):
     return Template(
         _read_template(html)
     ).render(**kwargs)
+
 
 if __name__ == '__main__':
     cli()
