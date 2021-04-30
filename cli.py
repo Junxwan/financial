@@ -412,8 +412,6 @@ def news_context():
 
             time.sleep(2)
 
-news_context()
-
 # 新聞email匯入
 @cli.command('news-email-import')
 @click.option('-i', '--input', type=click.Path(), help="輸入路徑")
