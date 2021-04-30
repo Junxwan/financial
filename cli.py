@@ -408,14 +408,15 @@ def news_context():
             if result.rowcount != 1:
                 error(f"update error id:{v['id']}")
             else:
-                log(f"get content {v['title']}")
+                log(f"get content {v['id']} {v['title']}")
 
             time.sleep(2)
 
+news_context()
 
 # 新聞email匯入
-# @cli.command('news-email-import')
-# @click.option('-i', '--input', type=click.Path(), help="輸入路徑")
+@cli.command('news-email-import')
+@click.option('-i', '--input', type=click.Path(), help="輸入路徑")
 def new_email_import(input):
     db = conf['databases']
     engine = create_engine(f"mysql+pymysql://{db['user']}:{db['password']}@{db['host']}:{db['port']}/{db['table']}",

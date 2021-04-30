@@ -66,8 +66,11 @@ def udn_context(url):
     if r.status_code != 200:
         return None
 
-    soup = BeautifulSoup(r.text, 'html.parser')
-    return soup.find('article', class_='article-content').prettify()
+    soup = BeautifulSoup(r.text, 'html.parser').find('article', class_='article-content')
+    if soup is None:
+        return None
+
+    return soup.prettify()
 
 
 # 蘋果 https://tw.appledaily.com/realtime/property/
@@ -156,7 +159,11 @@ def money_udn_context(url):
     if r.status_code != 200:
         return None
 
-    return BeautifulSoup(r.text, 'html.parser').find('div', id='article_body').prettify()
+    soup = BeautifulSoup(r.text, 'html.parser').find('div', id='article_body')
+    if soup is None:
+        return None
+
+    return soup.prettify()
 
 
 # 中時 https://www.chinatimes.com/money/total?page=1&chdtv
@@ -212,7 +219,11 @@ def chinatimes_context(url):
     for child in soup.find_all('div', class_='ad'):
         child.decompose()
 
-    return soup.find('div', class_='article-body').prettify()
+    soup = soup.find('div', class_='article-body')
+    if soup is None:
+        return None
+
+    return soup.prettify()
 
 
 # 科技新報 https://technews.tw/
@@ -244,7 +255,11 @@ def technews_context(url):
     if r.status_code != 200:
         return None
 
-    return BeautifulSoup(r.text, 'html.parser').find('div', class_='indent').prettify()
+    soup = BeautifulSoup(r.text, 'html.parser').find('div', class_='indent')
+    if soup is None:
+        return None
+
+    return soup.prettify()
 
 
 # 工商時報
@@ -304,4 +319,8 @@ def ctee_context(url):
     for child in soup.find_all('div', class_='mbwsrzpaxh-hide-on-desktop'):
         child.decompose()
 
-    return soup.find('div', class_='entry-content').prettify()
+    soup = soup.find('div', class_='entry-content')
+    if soup is None:
+        return None
+
+    return soup.prettify()
