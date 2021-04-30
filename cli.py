@@ -10,7 +10,7 @@ import crawler.price as price
 import crawler.cmoney as cmoney
 import crawler.news as cnews
 import pandas as pd
-from model import models
+from models import models
 from sqlalchemy.orm import Session
 from sqlalchemy import create_engine
 from configparser import ConfigParser
@@ -321,7 +321,7 @@ def news(email, hours, login_email, login_pwd, save=False):
         result = session.execute(models.news.insert(), insert)
 
         if result.is_insert == False or result.rowcount != len(insert):
-            log('insert error ' + date.__str__())
+            error('insert error ' + date.__str__())
         else:
             session.commit()
 

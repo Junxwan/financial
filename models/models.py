@@ -1,5 +1,4 @@
-from sqlalchemy.orm import registry
-from sqlalchemy import MetaData, Table, Column, Integer, String, Text, CHAR, TIMESTAMP
+from sqlalchemy import MetaData, Table, Column, Integer, String, Text, TIMESTAMP
 
 metadata = MetaData()
 
