@@ -5,12 +5,13 @@ import glob
 import logging
 import smtplib
 import pymysql
-import requests
+import eml_parser
 import crawler.twse as twse
 import crawler.price as price
 import crawler.cmoney as cmoney
 import crawler.news as cnews
 import pandas as pd
+from bs4 import BeautifulSoup
 from models import models
 from sqlalchemy.orm import Session
 from sqlalchemy import create_engine
@@ -57,6 +58,27 @@ else:
 
 conf = ConfigParser()
 conf.read('config.ini')
+
+
+def log(msg):
+    logging.info(msg)
+    click.echo(msg)
+
+
+def error(msg):
+    logging.error(msg)
+    click.echo(msg)
+
+
+def _read_template(html):
+    with open(os.path.join(f"./template/{html}")) as template:
+        return template.read()
+
+
+def render(html, **kwargs):
+    return Template(
+        _read_template(html)
+    ).render(**kwargs)
 
 
 @click.group()
@@ -361,7 +383,6 @@ def news_context():
     db = conf['databases']
     engine = create_engine(f"mysql+pymysql://{db['user']}:{db['password']}@{db['host']}:{db['port']}/{db['table']}",
                            encoding='utf8')
-
     source = {}
     for v in engine.execute(models.source.select()).all():
         source[v['id']] = v['name']
@@ -388,6 +409,54 @@ def news_context():
                 log(f"update error id:{v['id']}")
 
             time.sleep(2)
+
+
+# 新聞email匯入
+# @cli.command('news-email-import')
+# @click.option('-i', '--input', type=click.Path(), help="輸入路徑")
+def new_email_import(input):
+    db = conf['databases']
+    engine = create_engine(f"mysql+pymysql://{db['user']}:{db['password']}@{db['host']}:{db['port']}/{db['table']}",
+                           encoding='utf8')
+
+    insert = []
+    source = {}
+    for v in engine.execute(models.source.select()).all():
+        source[v['name']] = v['id']
+
+    for path in glob.glob(f"{input}/*.eml"):
+        ep = eml_parser.EmlParser(include_raw_body=True)
+        source_id = 0
+        publish_time = ''
+
+        for v in BeautifulSoup(ep.decode_email(path).get('body')[0]['content'], 'html.parser').findAll('td'):
+            name = v.text.strip().split('(')
+            if name[0].split('-')[0].strip() in ['聯合報', '中時', '科技新報', '經濟日報', '工商時報']:
+                nname = v.text.strip().split('(')
+                source_id = source[nname[0].strip()]
+                publish_time = nname[1][:-1]
+                continue
+
+            if source_id == 0 or v.text.strip() == '':
+                continue
+
+            if name[0].split('-')[0].strip() in ['蘋果', '證交所']:
+                source_id = 0
+                continue
+
+            if v.find('a') is not None:
+                title = v.text.strip()
+                insert.append({
+                    'source_id': source_id,
+                    'title': title[:len(title) - 19],
+                    'url': v.find('a').attrs['href'],
+                    'publish_time': publish_time,
+                })
+    result = engine.execute(models.news.insert(), insert)
+    if result.is_insert == False or result.rowcount != len(insert):
+        error('insert error')
+    else:
+        log(f"save {len(insert)} count")
 
 
 # 財報
@@ -437,27 +506,6 @@ def _get_financial(year, season, outpath, type):
                     log(f"save {type} {code} {k}")
 
             time.sleep(6)
-
-
-def log(msg):
-    logging.info(msg)
-    click.echo(msg)
-
-
-def error(msg):
-    logging.error(msg)
-    click.echo(msg)
-
-
-def _read_template(html):
-    with open(os.path.join(f"./template/{html}")) as template:
-        return template.read()
-
-
-def render(html, **kwargs):
-    return Template(
-        _read_template(html)
-    ).render(**kwargs)
 
 
 if __name__ == '__main__':
