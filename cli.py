@@ -406,7 +406,9 @@ def news_context():
             result = engine.execute(models.news.update().where(models.news.c.id == v['id']).values(context=context))
 
             if result.rowcount != 1:
-                log(f"update error id:{v['id']}")
+                error(f"update error id:{v['id']}")
+            else:
+                log(f"get content {v['title']}")
 
             time.sleep(2)
 
@@ -448,7 +450,7 @@ def new_email_import(input):
                 title = v.text.strip()
                 insert.append({
                     'source_id': source_id,
-                    'title': title[:len(title) - 19],
+                    'title': title[:title.find('(2021')].strip(),
                     'url': v.find('a').attrs['href'],
                     'publish_time': publish_time,
                 })
