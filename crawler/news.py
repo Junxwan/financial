@@ -59,6 +59,17 @@ def udn(cate_id, end_date):
     return news
 
 
+# 聯合報文章內容
+def udn_context(url):
+    r = requests.get(url, headers=HEADERS)
+
+    if r.status_code != 200:
+        return None
+
+    soup = BeautifulSoup(r.text, 'html.parser')
+    return soup.find('article', class_='article-content').prettify()
+
+
 # 蘋果 https://tw.appledaily.com/realtime/property/
 def appledaily(end_date, timezone='Asia/Taipei'):
     news = []
@@ -138,6 +149,16 @@ def money_udn(cate_id, sub_id, end_date, timezone='Asia/Taipei'):
     return news
 
 
+# 經濟日報章內容
+def money_udn_context(url):
+    r = requests.get(url, headers=HEADERS)
+
+    if r.status_code != 200:
+        return None
+
+    return BeautifulSoup(r.text, 'html.parser').find('div', id='article_body').prettify()
+
+
 # 中時 https://www.chinatimes.com/money/total?page=1&chdtv
 def chinatimes(end_date):
     news = []
@@ -178,6 +199,22 @@ def chinatimes(end_date):
     return news
 
 
+# 中時文章內容
+def chinatimes_context(url):
+    r = requests.get(url, headers=HEADERS)
+
+    if r.status_code != 200:
+        return None
+
+    soup = BeautifulSoup(r.text, 'html.parser')
+    for child in soup.find_all('div', class_='promote-word'):
+        child.decompose()
+    for child in soup.find_all('div', class_='ad'):
+        child.decompose()
+
+    return soup.find('div', class_='article-body').prettify()
+
+
 # 科技新報 https://technews.tw/
 def technews(end_date, timezone='Asia/Taipei'):
     news = []
@@ -198,6 +235,16 @@ def technews(end_date, timezone='Asia/Taipei'):
         })
 
     return news
+
+
+# 科技新報文章內容
+def technews_context(url):
+    r = requests.get(url, headers=HEADERS)
+
+    if r.status_code != 200:
+        return None
+
+    return BeautifulSoup(r.text, 'html.parser').find('div', class_='indent').prettify()
 
 
 # 工商時報
@@ -244,3 +291,17 @@ def ctee(end_date, type, timezone='Asia/Taipei'):
         time.sleep(1)
 
     return news
+
+
+# 工商時報文章內容
+def ctee_context(url):
+    r = requests.get(url, headers=HEADERS)
+
+    if r.status_code != 200:
+        return None
+
+    soup = BeautifulSoup(r.text, 'html.parser')
+    for child in soup.find_all('div', class_='mbwsrzpaxh-hide-on-desktop'):
+        child.decompose()
+
+    return soup.find('div', class_='entry-content').prettify()

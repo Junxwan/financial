@@ -5,6 +5,7 @@ import glob
 import logging
 import smtplib
 import pymysql
+import requests
 import crawler.twse as twse
 import crawler.price as price
 import crawler.cmoney as cmoney
@@ -268,7 +269,6 @@ def news(email, hours, login_email, login_pwd, save=False):
     data = [
         ['聯合報-產經', cnews.udn('6644', date)],
         ['聯合報-股市', cnews.udn('6645', date)],
-        ['蘋果-財經地產', cnews.appledaily(date)],
         ['中時', cnews.chinatimes(date)],
         ['科技新報', cnews.technews(date)],
         ['經濟日報-產業熱點', cnews.money_udn('5591', '5612', date)],
@@ -351,6 +351,43 @@ def news(email, hours, login_email, login_pwd, save=False):
             log('set news email ok')
         except Exception as e:
             error(f"set news email error {e.__str__()}")
+
+
+# 新聞
+@cli.command('news-context')
+def news_context():
+    log('start news context')
+
+    db = conf['databases']
+    engine = create_engine(f"mysql+pymysql://{db['user']}:{db['password']}@{db['host']}:{db['port']}/{db['table']}",
+                           encoding='utf8')
+
+    source = {}
+    for v in engine.execute(models.source.select()).all():
+        source[v['id']] = v['name']
+
+    for v in engine.execute(models.news.select().where(models.news.c.context == None).limit(500)).all():
+        name = source[v['source_id']].split('-')
+
+        context = None
+        if name[0] == '聯合報':
+            context = cnews.udn_context(v['url'])
+        elif name[0] == '中時':
+            context = cnews.chinatimes_context(v['url'])
+        elif name[0] == '科技新報':
+            context = cnews.technews_context(v['url'])
+        elif name[0] == '經濟日報':
+            context = cnews.money_udn_context(v['url'])
+        elif name[0] == '工商時報':
+            context = cnews.ctee_context(v['url'])
+
+        if context is not None:
+            result = engine.execute(models.news.update().where(models.news.c.id == v['id']).values(context=context))
+
+            if result.rowcount != 1:
+                log(f"update error id:{v['id']}")
+
+            time.sleep(2)
 
 
 # 財報
