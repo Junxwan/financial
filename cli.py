@@ -412,6 +412,7 @@ def news_context():
 
             time.sleep(2)
 
+
 # 新聞email匯入
 @cli.command('news-email-import')
 @click.option('-i', '--input', type=click.Path(), help="輸入路徑")
@@ -427,15 +428,15 @@ def new_email_import(input):
 
     for path in glob.glob(f"{input}/*.eml"):
         ep = eml_parser.EmlParser(include_raw_body=True)
+        email = ep.decode_email(path)
         source_id = 0
-        publish_time = ''
+        publish_time = email['header']['subject'][5:-5]
 
-        for v in BeautifulSoup(ep.decode_email(path).get('body')[0]['content'], 'html.parser').findAll('td'):
+        for v in BeautifulSoup(email.get('body')[0]['content'], 'html.parser').findAll('td'):
             name = v.text.strip().split('(')
             if name[0].split('-')[0].strip() in ['聯合報', '中時', '科技新報', '經濟日報', '工商時報']:
                 nname = v.text.strip().split('(')
                 source_id = source[nname[0].strip()]
-                publish_time = nname[1][:-1]
                 continue
 
             if source_id == 0 or v.text.strip() == '':
