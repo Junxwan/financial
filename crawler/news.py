@@ -324,3 +324,54 @@ def ctee_context(url):
         return None
 
     return soup.prettify()
+
+
+# 鉅亨網
+# https://news.cnyes.com/news/cat/tw_stock (台股)
+# https://news.cnyes.com/news/cat/wd_stock (國際股)
+def cnyes(end_date, type, timezone='Asia/Taipei'):
+    r = requests.get(
+        f"https://news.cnyes.com/news/cat/{type}",
+        headers=HEADERS
+    )
+
+    if r.status_code != 200:
+        return []
+
+    news = []
+    tz = pytz.timezone(timezone)
+    soup = BeautifulSoup(r.text, 'html.parser')
+    soup = soup.find('div', class_='theme-list')
+
+    for v in soup.find_all('a', class_='_1Zdp'):
+        date = dt.fromtimestamp(parser.parse(v.find('time').attrs['datetime']).timestamp(), tz=tz).strftime(
+            '%Y-%m-%d %H:%M:%S')
+
+        if date <= end_date:
+            break
+
+        news.append({
+            'title': v.attrs['title'].strip(),
+            'url': f"https://news.cnyes.com{v.attrs['href']}",
+            'date': date,
+        })
+
+    return news
+
+
+# 鉅亨網文章內容
+def cnyes_context(url):
+    r = requests.get(url, headers=HEADERS)
+
+    if r.status_code != 200:
+        return None
+
+    soup = BeautifulSoup(r.text, 'html.parser')
+    for child in soup.find_all('div', class_='cnyes-dfp-banner'):
+        child.decompose()
+
+    soup = soup.find('div', itemprop='articleBody')
+    if soup is None:
+        return None
+
+    return soup.prettify()

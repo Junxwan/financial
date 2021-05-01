@@ -275,7 +275,6 @@ def sp500(code, out):
 
         log(f"save {code} {date}")
 
-
 # 新聞
 @cli.command('news')
 @click.option('-e', '--email', type=click.STRING, help="email")
@@ -313,6 +312,8 @@ def news(email, hours, login_email, login_pwd, save=False):
         ['工商時報-科技', cnews.ctee(date, 'tech')],
         ['工商時報-國際', cnews.ctee(date, 'global')],
         ['工商時報-兩岸', cnews.ctee(date, 'china')],
+        ['鉅亨網-台股', cnews.cnyes(date, 'tw_stock')],
+        ['鉅亨網-國際股', cnews.cnyes(date, 'wd_stock')],
         ['證交所-即時重大訊息', twse.news(date)],
     ]
 
@@ -401,6 +402,8 @@ def news_context():
             context = cnews.money_udn_context(v['url'])
         elif name[0] == '工商時報':
             context = cnews.ctee_context(v['url'])
+        elif name[0] == '鉅亨網':
+            context = cnews.cnyes_context(v['url'])
 
         if context is not None:
             result = engine.execute(models.news.update().where(models.news.c.id == v['id']).values(context=context))
@@ -411,7 +414,6 @@ def news_context():
                 log(f"get content {v['id']} {v['title']}")
 
             time.sleep(2)
-
 
 # 新聞email匯入
 @cli.command('news-email-import')
@@ -434,7 +436,7 @@ def new_email_import(input):
 
         for v in BeautifulSoup(email.get('body')[0]['content'], 'html.parser').findAll('td'):
             name = v.text.strip().split('(')
-            if name[0].split('-')[0].strip() in ['聯合報', '中時', '科技新報', '經濟日報', '工商時報']:
+            if name[0].split('-')[0].strip() in ['聯合報', '中時', '科技新報', '經濟日報', '工商時報', '鉅亨網']:
                 nname = v.text.strip().split('(')
                 source_id = source[nname[0].strip()]
                 continue
