@@ -375,3 +375,63 @@ def cnyes_context(url):
         return None
 
     return soup.prettify()
+
+
+# 自由時報
+# https://ec.ltn.com.tw/list/international (國際財經)
+# https://ec.ltn.com.tw/list/securities (證券產業)
+def ltn(end_date, type):
+    news = []
+    isRun = True
+    page = 1
+
+    while isRun:
+        if page >= LIMIT:
+            break
+
+        r = requests.get(
+            f"https://ec.ltn.com.tw/list_ajax/{type}/{page}",
+            headers=HEADERS
+        )
+
+        if r.status_code != 200:
+            break
+
+        for v in r.json():
+            date = f"{v['A_ViewTime'][:4]}-{v['A_ViewTime'][5:7]}-{v['A_ViewTime'][8:10]} {v['A_ViewTime'][11:]}:00"
+
+            if date <= end_date:
+                isRun = False
+                break
+
+            news.append({
+                'title': v['LTNA_Title'],
+                'url': v['url'],
+                'date': date,
+            })
+
+        page = page + 1
+
+        time.sleep(1)
+
+    return news
+
+
+# 自由時報文章內容
+def ltn_context(url):
+    r = requests.get(url, headers=HEADERS)
+
+    if r.status_code != 200:
+        return None
+
+    soup = BeautifulSoup(r.text, 'html.parser').find('div', class_='text')
+    if soup is None:
+        return None
+
+    for child in soup.find_all('p', class_='appE1121'):
+        child.decompose()
+
+    for child in soup.find_all('script'):
+        child.decompose()
+
+    return soup.prettify()

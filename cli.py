@@ -317,6 +317,8 @@ def news(email, hours, login_email, login_pwd, save=False):
         ['工商時報-兩岸', cnews.ctee(date, 'china')],
         ['鉅亨網-台股', cnews.cnyes(date, 'tw_stock')],
         ['鉅亨網-國際股', cnews.cnyes(date, 'wd_stock')],
+        ['自由時報-國際財經', cnews.ltn(date, 'international')],
+        ['自由時報-證券產業', cnews.ltn(date, 'securities')],
         ['證交所-即時重大訊息', twse.news(date)],
     ]
 
@@ -407,6 +409,8 @@ def news_context():
             context = cnews.ctee_context(v['url'])
         elif name[0] == '鉅亨網':
             context = cnews.cnyes_context(v['url'])
+        elif name[0] == '自由時報':
+            context = cnews.ltn_context(v['url'])
 
         if context is not None:
             result = engine.execute(models.news.update().where(models.news.c.id == v['id']).values(context=context))
