@@ -130,10 +130,12 @@ def month_revenue(year, month, outpath):
     log(f'read month_revenue {year}-{m}')
 
     data = twse.month_revenue(year, month)
-    data.to_csv(os.path.join(dir, f"{year}-{m}.csv"), index=False, encoding='utf_8_sig')
+    if data is not None:
+        data.to_csv(os.path.join(dir, f"{year}-{m}.csv"), index=False, encoding='utf_8_sig')
 
-    log(f"save month_revenue {year}-{m}")
-
+        log(f"save month_revenue {year}-{m}")
+    else:
+        error('not month_revenue')
 
 # 財報
 @cli.command('financial')
@@ -275,6 +277,7 @@ def sp500(code, out):
 
         log(f"save {code} {date}")
 
+
 # 新聞
 @cli.command('news')
 @click.option('-e', '--email', type=click.STRING, help="email")
@@ -414,6 +417,7 @@ def news_context():
                 log(f"get content {v['id']} {v['title']}")
 
             time.sleep(2)
+
 
 # 新聞email匯入
 @cli.command('news-email-import')
