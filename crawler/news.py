@@ -66,11 +66,16 @@ def udn_context(url):
     if r.status_code != 200:
         return None
 
-    soup = BeautifulSoup(r.text, 'html.parser').find('article', class_='article-content')
-    if soup is None:
+    soup = BeautifulSoup(r.text, 'html.parser')
+    body = soup.find('article', class_='article-content')
+    if body is None:
+        body = soup.find('meta', property='og:description')
+
+        if body is not None:
+            return body.attrs['content']
         return None
 
-    return soup.prettify()
+    return body.prettify()
 
 
 # 蘋果 https://tw.appledaily.com/realtime/property/
