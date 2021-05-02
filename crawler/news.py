@@ -440,3 +440,69 @@ def ltn_context(url):
         child.decompose()
 
     return soup.prettify()
+
+
+# moneydj
+# https://www.moneydj.com/kmdj/news/newsreallist.aspx?a=mb010000 (頭條新聞)
+# https://www.moneydj.com/kmdj/news/newsreallist.aspx?a=mb020000 (總體經濟)
+# https://www.moneydj.com/kmdj/news/newsreallist.aspx?a=mb040200 (債券市場)
+# https://www.moneydj.com/kmdj/news/newsreallist.aspx?a=mb07 (產業情報)
+def moneydj(end_date, type):
+    news = []
+    isRun = True
+    page = 1
+
+    while isRun:
+        if page >= LIMIT:
+            break
+
+        r = requests.get(
+            f"https://www.moneydj.com/kmdj/news/newsreallist.aspx?index1={page}&a={type}",
+            headers=HEADERS
+        )
+
+        if r.status_code != 200:
+            break
+
+        soup = BeautifulSoup(r.text, 'html.parser')
+        y = soup.find('span', class_='today').text.strip()[:4]
+
+        for v in soup.find('table', class_='forumgrid').find_all('tr'):
+            if v.text.strip() == '時間標題人氣':
+                continue
+            v.find('a')
+            date = f"{y}-{v.contents[1].text.strip()[:2]}-{v.contents[1].text.strip()[3:5]} {v.contents[1].text.strip()[6:11]}:00"
+
+            if date <= end_date:
+                isRun = False
+                break
+
+            news.append({
+                'title': v.contents[2].text.strip(),
+                'url': f"https://www.moneydj.com{v.find('a').attrs['href']}",
+                'date': date,
+            })
+
+        page = page + 1
+
+        time.sleep(1)
+
+    return news
+
+
+# moneydj 文章內容
+def moneydj_context(url):
+    r = requests.get(url, headers=HEADERS)
+
+    if r.status_code != 200:
+        return None
+
+    soup = BeautifulSoup(r.text, 'html.parser').find('div', id='viewer_body')
+    if soup is None:
+        return None
+
+    soup = soup.find('div', class_='wikilink')
+    if soup is None:
+        return None
+
+    return soup.prettify()

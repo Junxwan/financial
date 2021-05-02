@@ -319,6 +319,10 @@ def news(email, hours, login_email, login_pwd, save=False):
         ['鉅亨網-國際股', cnews.cnyes(date, 'wd_stock')],
         ['自由時報-國際財經', cnews.ltn(date, 'international')],
         ['自由時報-證券產業', cnews.ltn(date, 'securities')],
+        ['moneydj-頭條新聞', cnews.moneydj(date, 'mb010000')],
+        ['moneydj-總體經濟', cnews.moneydj(date, 'mb020000')],
+        ['moneydj-債券市場', cnews.moneydj(date, 'mb040200')],
+        ['moneydj-產業情報', cnews.moneydj(date, 'mb07')],
         ['證交所-即時重大訊息', twse.news(date)],
     ]
 
@@ -411,6 +415,8 @@ def news_context():
             context = cnews.cnyes_context(v['url'])
         elif name[0] == '自由時報':
             context = cnews.ltn_context(v['url'])
+        elif name[0] == 'moneydj':
+            context = cnews.moneydj_context(v['url'])
 
         if context is not None:
             result = engine.execute(models.news.update().where(models.news.c.id == v['id']).values(context=context))
@@ -444,7 +450,7 @@ def new_email_import(input):
 
         for v in BeautifulSoup(email.get('body')[0]['content'], 'html.parser').findAll('td'):
             name = v.text.strip().split('(')
-            if name[0].split('-')[0].strip() in ['聯合報', '中時', '科技新報', '經濟日報', '工商時報', '鉅亨網']:
+            if name[0].split('-')[0].strip() in ['聯合報', '中時', '科技新報', '經濟日報', '工商時報', '鉅亨網', '自由時報', 'moneydj']:
                 nname = v.text.strip().split('(')
                 source_id = source[nname[0].strip()]
                 continue
