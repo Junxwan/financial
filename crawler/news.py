@@ -1,3 +1,4 @@
+import json
 import requests
 import time
 import feedparser
@@ -506,3 +507,62 @@ def moneydj_context(url):
         return None
 
     return soup.prettify()
+
+
+# 東森新聞
+# https://fnc.ebc.net.tw/fncnews/stock (財經新聞台股)
+def ebc(end_date, type, timezone='Asia/Taipei'):
+    news = []
+    isRun = True
+    page = 1
+
+    while isRun:
+        if page >= LIMIT:
+            break
+
+        r = requests.get(
+            f"https://fnc.ebc.net.tw/fncnews/{type}?page={page}",
+            headers=HEADERS
+        )
+
+        if r.status_code != 200:
+            break
+
+        soup = BeautifulSoup(r.text, 'html.parser')
+
+        for v in soup.find('div', class_='fncnews-list-box').find_all('a'):
+            date = dt.fromtimestamp(
+                parser.parse(f"{v.find('span', class_='small-gray-text').text[1:-1]}:00").timestamp()).strftime(
+                '%Y-%m-%d %H:%M:%S')
+
+            if date <= end_date:
+                isRun = False
+                break
+
+            news.append({
+                'title': v.find('p').text.strip(),
+                'url': f"https://fnc.ebc.net.tw{v.attrs['href']}",
+                'date': date,
+            })
+
+        page = page + 1
+
+        time.sleep(1)
+
+    return news
+
+
+# 東森新聞文章內容
+def ebc_context(url):
+    r = requests.get(url, headers=HEADERS)
+
+    if r.status_code != 200:
+        return None
+
+    soup = BeautifulSoup(r.text, 'html.parser').find_all('script')
+    if len(soup) < 19 or len(soup[19].contents) < 1:
+        return None
+
+    body = soup[19].contents[0]
+
+    return json.loads(body[body.find("{"):body.find("}") + 1])['content']
