@@ -612,7 +612,7 @@ def trendforce(end_date, day=1):
     return news
 
 
-# trendforce文章內容
+# trendforce 文章內容
 def trendforce_context(url):
     r = requests.get(url, headers=HEADERS)
 
@@ -620,3 +620,61 @@ def trendforce_context(url):
         return None
 
     return BeautifulSoup(r.text, 'html.parser').find('div', class_='presscenter').prettify()
+
+
+# dramx
+# https://www.dramx.com/Info/1.html#articlelist
+def dramx(end_date):
+    news = []
+    isRun = True
+    page = 1
+
+    while isRun:
+        if page >= 300:
+            break
+
+        r = requests.get(
+            f"https://www.dramx.com/Info/{page}.html#articlelist",
+            headers=HEADERS
+        )
+
+        if r.status_code != 200:
+            break
+
+        soup = BeautifulSoup(r.text, 'html.parser')
+
+        for v in soup.find_all('div', class_='Article-box-cont'):
+            t = v.find('img').attrs['src'].split('/')[-1][:14]
+            url = f"https://www.dramx.com{v.find('a').attrs['href']}"
+
+            if t.find('Default') == 0:
+                r = requests.get(url, headers=HEADERS)
+                date = BeautifulSoup(r.text, 'html.parser').find('time').text
+            else:
+                date = f"{t[:4]}-{t[4:6]}-{t[6:8]} {t[8:10]}:{t[10:12]}:{t[12:14]}"
+
+            if date <= end_date:
+                isRun = False
+                break
+
+            news.append({
+                'title': v.find('h3').text.strip(),
+                'url': url,
+                'date': date,
+            })
+
+        page = page + 1
+
+        time.sleep(1)
+
+    return news
+
+
+# dramx 文章內容
+def dramx_context(url):
+    r = requests.get(url, headers=HEADERS)
+
+    if r.status_code != 200:
+        return None
+
+    return BeautifulSoup(r.text, 'html.parser').find('div', class_='newspage-cont').prettify()
