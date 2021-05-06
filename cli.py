@@ -6,6 +6,7 @@ import logging
 import smtplib
 import pymysql
 import eml_parser
+import requests
 import crawler.twse as twse
 import crawler.price as price
 import crawler.cmoney as cmoney
@@ -81,6 +82,12 @@ def render(html, **kwargs):
     ).render(**kwargs)
 
 
+def one(date, f):
+    if date[11:] >= '00:00:00' and date[11:] <= '00:10:00':
+        return f()
+    return []
+
+
 @click.group()
 def cli():
     dir = os.path.join(os.getcwd(), 'log')
@@ -136,6 +143,7 @@ def month_revenue(year, month, outpath):
         log(f"save month_revenue {year}-{m}")
     else:
         error('not month_revenue')
+
 
 # 財報
 @cli.command('financial')
@@ -290,6 +298,9 @@ def news(email, hours, login_email, login_pwd, save=False):
 
     date = (datetime.now() - timedelta(hours=hours)).strftime("%Y-%m-%d %H:%M:%S")
 
+    def trendforce():
+        return cnews.trendforce(date, 1)
+
     data = [
         ['聯合報-產經', cnews.udn('6644', date)],
         ['聯合報-股市', cnews.udn('6645', date)],
@@ -324,6 +335,7 @@ def news(email, hours, login_email, login_pwd, save=False):
         ['moneydj-債券市場', cnews.moneydj(date, 'mb040200')],
         ['moneydj-產業情報', cnews.moneydj(date, 'mb07')],
         ['東森新聞-財經新聞台股', cnews.ebc(date, 'stock')],
+        ['trendforce', one(date, trendforce)],
         ['證交所-即時重大訊息', twse.news(date)],
     ]
 
@@ -420,6 +432,8 @@ def news_context():
             context = cnews.moneydj_context(v['url'])
         elif name[0] == '東森新聞':
             context = cnews.ebc_context(v['url'])
+        elif name[0] == 'trendforce':
+            context = cnews.trendforce(v['url'])
 
         if context is not None:
             result = engine.execute(models.news.update().where(models.news.c.id == v['id']).values(context=context))
@@ -453,7 +467,8 @@ def new_email_import(input):
 
         for v in BeautifulSoup(email.get('body')[0]['content'], 'html.parser').findAll('td'):
             name = v.text.strip().split('(')
-            if name[0].split('-')[0].strip() in ['聯合報', '中時', '科技新報', '經濟日報', '工商時報', '鉅亨網', '自由時報', 'moneydj', '東森新聞']:
+            if name[0].split('-')[0].strip() in ['聯合報', '中時', '科技新報', '經濟日報', '工商時報', '鉅亨網', '自由時報', 'moneydj', '東森新聞',
+                                                 'trendforce']:
                 nname = v.text.strip().split('(')
                 source_id = source[nname[0].strip()]
                 continue
@@ -507,7 +522,20 @@ def _get_financial(year, season, outpath, type):
             elif type == CHANGES_IN_EQUITY:
                 get = twse.changes_in_equity
 
-            d = get(code, year, season)
+            d = {}
+            while (True):
+                try:
+                    d = get(code, year, season)
+                    break
+
+                except requests.exceptions.ConnectionError as e:
+                    logging.error(e.__str__())
+                    logging.info("等待重新執行")
+                    time.sleep(10)
+
+                except Exception as e:
+                    logging.error(e.__str__())
+                    break
 
             if len(d) == 0:
                 log(f"{type} {code} not found")

@@ -4,6 +4,7 @@ import time
 import feedparser
 import pytz
 from datetime import datetime as dt
+from datetime import timedelta
 from dateutil import parser
 from bs4 import BeautifulSoup
 
@@ -511,7 +512,7 @@ def moneydj_context(url):
 
 # 東森新聞
 # https://fnc.ebc.net.tw/fncnews/stock (財經新聞台股)
-def ebc(end_date, type, timezone='Asia/Taipei'):
+def ebc(end_date, type):
     news = []
     isRun = True
     page = 1
@@ -566,3 +567,56 @@ def ebc_context(url):
     body = soup[19].contents[0]
 
     return json.loads(body[body.find("{"):body.find("}") + 1])['content']
+
+
+# trendforce
+# https://www.trendforce.cn/presscenter/news?page=1 新聞中心
+def trendforce(end_date, day=1):
+    news = []
+    isRun = True
+    page = 1
+
+    while isRun:
+        if page >= LIMIT:
+            break
+
+        r = requests.get(
+            f"https://www.trendforce.cn/presscenter/news?page={page}",
+            headers=HEADERS
+        )
+
+        if r.status_code != 200:
+            break
+
+        soup = BeautifulSoup(r.text, 'html.parser')
+        end_date = (dt.fromtimestamp(parser.parse(end_date).timestamp()) - timedelta(days=day)).strftime(
+            '%Y-%m-%d %H:%M:%S')
+
+        for v in soup.find_all('div', class_='list-item'):
+            date = dt.fromtimestamp(parser.parse(v.find('h4').text).timestamp()).strftime('%Y-%m-%d %H:%M:%S')
+
+            if date < end_date:
+                isRun = False
+                break
+
+            news.append({
+                'title': v.find('a').text,
+                'url': f"https://www.trendforce.cn{v.find('a').attrs['href']}",
+                'date': date,
+            })
+
+        page = page + 1
+
+        time.sleep(1)
+
+    return news
+
+
+# trendforce文章內容
+def trendforce_context(url):
+    r = requests.get(url, headers=HEADERS)
+
+    if r.status_code != 200:
+        return None
+
+    return BeautifulSoup(r.text, 'html.parser').find('div', class_='presscenter').prettify()
