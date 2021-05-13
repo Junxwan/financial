@@ -599,7 +599,8 @@ def trendforce(end_date):
             if r.status_code != 200:
                 break
 
-            image = BeautifulSoup(r.text, 'html.parser').find("meta", property="og:image").attrs['content'].split('/')[-1]
+            image = BeautifulSoup(r.text, 'html.parser').find("meta", property="og:image")
+            image = image.attrs['content'].split('/')[-1]
             date = f"{image[:4]}-{image[4:6]}-{image[6:8]} {image[9:11]}:{image[11:13]}:{image[13:15]}"
 
             if date < end_date:
@@ -685,3 +686,47 @@ def dramx_context(url):
         return None
 
     return BeautifulSoup(r.text, 'html.parser').find('div', class_='newspage-cont').prettify()
+
+
+# digitimes-每日椽真
+# https://www.digitimes.com.tw/wartrade.asp
+def digitimes_wartrade(end_date):
+    news = []
+
+    r = requests.get(
+        "https://www.digitimes.com.tw/wartrade.asp",
+        headers=HEADERS
+    )
+
+    if r.status_code != 200:
+        return news
+
+    soup = BeautifulSoup(r.text, 'html.parser')
+
+    for v in soup.find_all('p', style='padding:0;'):
+        url = f"https://www.digitimes.com.tw{v.find('a').attrs['href']}"
+        r = requests.get(url, headers=HEADERS)
+        date = BeautifulSoup(r.text, 'html.parser').find('time').text
+
+        if date < end_date:
+            break
+
+        news.append({
+            'title': v.text.strip(),
+            'url': url,
+            'date': date,
+        })
+
+        time.sleep(1)
+
+    return news
+
+
+# digitimes-內容文章
+def digitimes_context(url):
+    r = requests.get(url, headers=HEADERS)
+
+    if r.status_code != 200:
+        return None
+
+    return BeautifulSoup(r.text, 'html.parser').find('div', id='newsText').prettify()

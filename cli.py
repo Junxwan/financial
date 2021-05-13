@@ -279,7 +279,6 @@ def sp500(code, out):
 
         log(f"save {code} {date}")
 
-
 # 新聞
 @cli.command('news')
 @click.option('-e', '--email', type=click.STRING, help="email")
@@ -328,6 +327,7 @@ def news(email, hours, login_email, login_pwd, save=False):
         ['東森新聞-財經新聞台股', cnews.ebc(date, 'stock')],
         ['trendforce', cnews.trendforce(date)],
         ['dramx', cnews.dramx(date)],
+        ['digitimes-每日椽真', cnews.digitimes_wartrade(date)],
         ['證交所-即時重大訊息', twse.news(date)],
     ]
 
@@ -428,6 +428,8 @@ def news_context():
             context = cnews.trendforce_context(v['url'])
         elif name[0] == 'dramx':
             context = cnews.dramx_context(v['url'])
+        elif name[0] == 'digitimes':
+            context = cnews.digitimes_context(v['url'])
 
         if context is not None:
             result = engine.execute(models.news.update().where(models.news.c.id == v['id']).values(context=context))
@@ -462,7 +464,7 @@ def new_email_import(input):
         for v in BeautifulSoup(email.get('body')[0]['content'], 'html.parser').findAll('td'):
             name = v.text.strip().split('(')
             if name[0].split('-')[0].strip() in ['聯合報', '中時', '科技新報', '經濟日報', '工商時報', '鉅亨網', '自由時報', 'moneydj', '東森新聞',
-                                                 'trendforce', 'dramx']:
+                                                 'trendforce', 'dramx', 'digitimes']:
                 nname = v.text.strip().split('(')
                 source_id = source[nname[0].strip()]
                 continue
