@@ -571,7 +571,7 @@ def ebc_context(url):
 
 # trendforce
 # https://www.trendforce.cn/presscenter/news?page=1 新聞中心
-def trendforce(end_date, day=1):
+def trendforce(end_date):
     news = []
     isRun = True
     page = 1
@@ -589,11 +589,18 @@ def trendforce(end_date, day=1):
             break
 
         soup = BeautifulSoup(r.text, 'html.parser')
-        end_date = (dt.fromtimestamp(parser.parse(end_date).timestamp()) - timedelta(days=day)).strftime(
-            '%Y-%m-%d %H:%M:%S')
-
         for v in soup.find_all('div', class_='list-item'):
-            date = dt.fromtimestamp(parser.parse(v.find('h4').text).timestamp()).strftime('%Y-%m-%d %H:%M:%S')
+            time.sleep(1)
+
+            url = f"https://www.trendforce.cn{v.find('a').attrs['href']}"
+
+            r = requests.get(url, headers=HEADERS)
+
+            if r.status_code != 200:
+                break
+
+            image = BeautifulSoup(r.text, 'html.parser').find("meta", property="og:image").attrs['content'].split('/')[-1]
+            date = f"{image[:4]}-{image[4:6]}-{image[6:8]} {image[9:11]}:{image[11:13]}:{image[13:15]}"
 
             if date < end_date:
                 isRun = False
@@ -601,7 +608,7 @@ def trendforce(end_date, day=1):
 
             news.append({
                 'title': v.find('a').text,
-                'url': f"https://www.trendforce.cn{v.find('a').attrs['href']}",
+                'url': url,
                 'date': date,
             })
 

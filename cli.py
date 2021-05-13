@@ -82,12 +82,6 @@ def render(html, **kwargs):
     ).render(**kwargs)
 
 
-def one(date, f):
-    if date[11:] >= '00:00:00' and date[11:] <= '00:10:00':
-        return f()
-    return []
-
-
 @click.group()
 def cli():
     dir = os.path.join(os.getcwd(), 'log')
@@ -298,9 +292,6 @@ def news(email, hours, login_email, login_pwd, save=False):
 
     date = (datetime.now() - timedelta(hours=hours)).strftime("%Y-%m-%d %H:%M:%S")
 
-    def trendforce():
-        return cnews.trendforce(date, 1)
-
     data = [
         ['聯合報-產經', cnews.udn('6644', date)],
         ['聯合報-股市', cnews.udn('6645', date)],
@@ -335,7 +326,7 @@ def news(email, hours, login_email, login_pwd, save=False):
         ['moneydj-債券市場', cnews.moneydj(date, 'mb040200')],
         ['moneydj-產業情報', cnews.moneydj(date, 'mb07')],
         ['東森新聞-財經新聞台股', cnews.ebc(date, 'stock')],
-        ['trendforce', one(date, trendforce)],
+        ['trendforce', cnews.trendforce(date)],
         ['dramx', cnews.dramx(date)],
         ['證交所-即時重大訊息', twse.news(date)],
     ]
