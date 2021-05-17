@@ -688,34 +688,65 @@ def dramx_context(url):
     return BeautifulSoup(r.text, 'html.parser').find('div', class_='newspage-cont').prettify()
 
 
-# digitimes-每日椽真
-# https://www.digitimes.com.tw/wartrade.asp
-def digitimes_wartrade(end_date):
+# digitimes-報導總欄
+# https://www.digitimes.com.tw/tech/dt/allnewslist.asp?CnlID=99
+def digitimes(end_date, timezone='Asia/Taipei'):
     news = []
+    isRun = True
+    page = 1
+    tz = pytz.timezone(timezone)
 
-    r = requests.get(
-        "https://www.digitimes.com.tw/wartrade.asp",
-        headers=HEADERS
-    )
-
-    if r.status_code != 200:
-        return news
-
-    soup = BeautifulSoup(r.text, 'html.parser')
-
-    for v in soup.find_all('p', style='padding:0;'):
-        url = f"https://www.digitimes.com.tw{v.find('a').attrs['href']}"
-        r = requests.get(url, headers=HEADERS)
-        date = BeautifulSoup(r.text, 'html.parser').find('time').text
-
-        if date < end_date:
+    while isRun:
+        if page >= 300:
             break
 
-        news.append({
-            'title': v.text.strip(),
-            'url': url,
-            'date': date,
-        })
+        r = requests.post(
+            "https://www.digitimes.com.tw/tech/dt/newslist_ajax.asp", {
+                'sdate': 0,
+                'cat1': 0,
+                'sort': 0,
+                'sorttype': 'desc',
+                'page': page,
+            },
+            headers={
+                'User-Agent': USER_AGENT,
+                'Host': 'www.digitimes.com.tw',
+                'Referer': 'https://www.digitimes.com.tw/tech/dt/allnewslist.asp?CnlID=99',
+            }
+        )
+
+        if r.status_code != 200:
+            break
+
+        soup = BeautifulSoup(r.text, 'html.parser')
+        year = soup.find('input', class_='showdate').attrs['value'][:4]
+
+        for v in soup.find_all('div', class_='col-md-12 col-sm-12 col-xs-12 trbox'):
+            span = v.find_all('span')
+            date = dt.fromtimestamp(parser.parse(f"{year} {span[3].text}").timestamp(), tz=tz).strftime(
+                '%Y-%m-%d %H:%M:%S')
+
+            if date <= end_date:
+                isRun = False
+                break
+
+            url = f"https://www.digitimes.com.tw{v.find('a', target='_blank').attrs['href']}"
+
+            r = requests.get(url, headers=HEADERS)
+            soup = BeautifulSoup(r.text, 'html.parser')
+
+            time.sleep(1)
+
+            if (soup.find('button') is not None):
+                continue
+
+            news.append({
+                'title': span[1].text,
+                'url': url,
+                'date': date,
+            })
+
+        page = page + 1
 
         time.sleep(1)
 

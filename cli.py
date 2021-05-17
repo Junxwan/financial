@@ -60,7 +60,6 @@ else:
 conf = ConfigParser()
 conf.read('config.ini')
 
-
 def log(msg):
     logging.info(msg)
     click.echo(msg)
@@ -327,7 +326,7 @@ def news(email, hours, login_email, login_pwd, save=False):
         ['東森新聞-財經新聞台股', cnews.ebc(date, 'stock')],
         ['trendforce', cnews.trendforce(date)],
         ['dramx', cnews.dramx(date)],
-        ['digitimes-每日椽真', cnews.digitimes_wartrade(date)],
+        ['digitimes-報導總欄', cnews.digitimes(date)],
         ['證交所-即時重大訊息', twse.news(date)],
     ]
 
