@@ -280,7 +280,6 @@ def sp500(code, out):
 
         log(f"save {code} {date}")
 
-
 # 投信公會持股明細
 @cli.command('fund')
 @click.option('-y', '--year', type=click.INT, help="年")

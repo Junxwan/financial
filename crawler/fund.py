@@ -24,6 +24,7 @@ def get(year=None, month=None, id=None):
     dates = [v.attrs['value'] for v in select[0].find_all('option')]
     fund = [v.attrs['value'] for v in select[1].find_all('option')]
     fund_name = [v.text.split(' ')[1] for v in select[1].find_all('option')]
+    yms = []
 
     if year is None and month is None:
         yms = dates
@@ -48,6 +49,7 @@ def get(year=None, month=None, id=None):
         data[ym] = []
         for id in ids:
             logging.info(f"{ym}-{id}-{fund_name[fund.index(id)]}")
+
             r = requests.post("https://www.sitca.org.tw/ROC/Industry/IN2629.aspx", data={
                 "__EVENTTARGET": '',
                 "__EVENTARGUMENT": '',
@@ -71,35 +73,35 @@ def get(year=None, month=None, id=None):
 
             time.sleep(1)
 
-            rows = BeautifulSoup(r.text, 'html.parser').find_all('table')[3].find_all('tr')[1:]
-            headers = [row.find('td') for row in rows
-                       if 'rowspan' in row.find('td').attrs and int(row.find('td').attrs['rowspan']) > 0
+            rows = BeautifulSoup(r.text, 'html.parser').find_all('table')[3].find_all('td')[10:]
+            headers = [row for row in rows
+                       if 'rowspan' in row.attrs and int(row.attrs['rowspan']) > 0
                        ]
 
-            index = 0
             tmps = []
-
-            for row in headers:
-                offset = int(row.attrs['rowspan']) + index
-                index += 1
+            for i in range(len(headers)):
 
                 tmp = []
-                for v in rows[index:offset]:
-                    tds = v.find_all('td')
+                num = int(headers[i].attrs['rowspan'])
+                list = rows[1:(num * 9) + 1]
+
+                for ii in range(num):
+                    v = list[ii * 9:(ii + 1) * 9]
+
                     tmp.append({
-                        'code': tds[2].text,
-                        'name': tds[3].text,
-                        'amount': tds[4].text,
-                        'total': tds[8].text,
-                        'type': tds[1].text,
+                        'code': v[2].text,
+                        'name': v[3].text,
+                        'amount': v[4].text,
+                        'total': v[8].text,
+                        'type': v[1].text,
                     })
 
                 tmps.append({
-                    'name': row.text,
+                    'name': headers[i].text,
                     'data': tmp,
                 })
 
-                index += int(row.attrs['rowspan'])
+                rows = rows[(num * 9) + 3:]
 
             data[ym].append({
                 'name': fund_name[fund.index(id)],
