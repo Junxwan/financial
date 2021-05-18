@@ -61,6 +61,7 @@ else:
 conf = ConfigParser()
 conf.read('config.ini')
 
+
 def log(msg):
     logging.info(msg)
     click.echo(msg)
@@ -282,12 +283,13 @@ def sp500(code, out):
 
 # 投信公會持股明細
 @cli.command('fund')
-@click.option('-ym', '--year_month', type=click.INT, help="年月")
+@click.option('-y', '--year', type=click.INT, help="年")
+@click.option('-m', '--month', type=click.INT, help="月")
 @click.option('-c', '--id', type=click.INT, help="卷商id")
 @click.option('-o', '--out', type=click.Path(), help="輸出")
-def get_fund(year_month, id, out):
+def get_fund(year, month, id, out):
     data = []
-    for ym, rows in fund.get(ym=year_month, id=id).items():
+    for ym, rows in fund.get(year=year, month=month, id=id).items():
         f = os.path.join(out, str(ym)) + ".csv"
 
         if os.path.exists(f):
@@ -302,6 +304,11 @@ def get_fund(year_month, id, out):
             data,
             columns=['c_name', 'f_name', 'code', 'name', 'amount', 'total', 'type']
         ).to_csv(f, index=False, encoding='utf_8_sig')
+
+
+#
+# get_fund('202104', None, 'D:\\data\\financial\\fund')
+# print('202104')
 
 
 # 新聞

@@ -1,5 +1,6 @@
+import logging
 import time
-
+from datetime import datetime
 import requests
 import pandas as pd
 from bs4 import BeautifulSoup
@@ -11,7 +12,7 @@ HEADERS = {
 }
 
 
-def get(ym=None, id=None):
+def get(year=None, month=None, id=None):
     r = requests.get("https://www.sitca.org.tw/ROC/Industry/IN2629.aspx", headers=HEADERS)
 
     if r.status_code != 200:
@@ -24,10 +25,14 @@ def get(ym=None, id=None):
     fund = [v.attrs['value'] for v in select[1].find_all('option')]
     fund_name = [v.text.split(' ')[1] for v in select[1].find_all('option')]
 
-    if ym is None:
+    if year is None and month is None:
         yms = dates
-    else:
-        yms = [ym]
+    elif year is not None and month is not None:
+        yms = [f"{year}{month:02}"]
+    elif year is not None:
+        yms = [f"{year}{i + 1:02}" for i in range(12)]
+    elif month is not None:
+        yms = [f"{datetime.now().year}{month:02}"]
 
     if id is None:
         ids = fund
@@ -42,6 +47,7 @@ def get(ym=None, id=None):
     for ym in yms[::-1]:
         data[ym] = []
         for id in ids:
+            logging.info(f"{ym}-{id}-{fund_name[fund.index(id)]}")
             r = requests.post("https://www.sitca.org.tw/ROC/Industry/IN2629.aspx", data={
                 "__EVENTTARGET": '',
                 "__EVENTARGUMENT": '',
@@ -63,7 +69,7 @@ def get(ym=None, id=None):
             if r.status_code != 200:
                 return None
 
-            time.sleep(2)
+            time.sleep(1)
 
             rows = BeautifulSoup(r.text, 'html.parser').find_all('table')[3].find_all('tr')[1:]
             headers = [row.find('td') for row in rows
