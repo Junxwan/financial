@@ -11,6 +11,7 @@ import crawler.twse as twse
 import crawler.price as price
 import crawler.cmoney as cmoney
 import crawler.news as cnews
+import crawler.fund as fund
 import pandas as pd
 from bs4 import BeautifulSoup
 from models import models
@@ -277,6 +278,31 @@ def sp500(code, out):
         table.to_csv(os.path.join(dir, f"{date}.csv"), index=False, encoding='utf_8_sig')
 
         log(f"save {code} {date}")
+
+
+# 投信公會持股明細
+@cli.command('fund')
+@click.option('-ym', '--year_month', type=click.INT, help="年月")
+@click.option('-c', '--id', type=click.INT, help="卷商id")
+@click.option('-o', '--out', type=click.Path(), help="輸出")
+def get_fund(year_month, id, out):
+    data = []
+    for ym, rows in fund.get(ym=year_month, id=id).items():
+        f = os.path.join(out, str(ym)) + ".csv"
+
+        if os.path.exists(f):
+            continue
+
+        for v in rows:
+            for value in v['data']:
+                for code in value['data']:
+                    data.append([v['name'], value['name']] + list(code.values()))
+
+        pd.DataFrame(
+            data,
+            columns=['c_name', 'f_name', 'code', 'name', 'amount', 'total', 'type']
+        ).to_csv(f, index=False, encoding='utf_8_sig')
+
 
 # 新聞
 @cli.command('news')
