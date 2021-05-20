@@ -599,9 +599,15 @@ def trendforce(end_date):
             if r.status_code != 200:
                 break
 
-            image = BeautifulSoup(r.text, 'html.parser').find("meta", property="og:image")
+            soup = BeautifulSoup(r.text, 'html.parser')
+            image = soup.find("meta", property="og:image")
             image = image.attrs['content'].split('/')[-1]
             date = f"{image[:4]}-{image[4:6]}-{image[6:8]} {image[9:11]}:{image[11:13]}:{image[13:15]}"
+
+            try:
+                parser.parse(date)
+            except Exception as a:
+                date = parser.parse(soup.find('div', class_='tag-row').contents[1].text).strftime('%Y-%m-%d %H:%M:%S')
 
             if date < end_date:
                 isRun = False
@@ -719,7 +725,7 @@ def digitimes(end_date, timezone='Asia/Taipei'):
             break
 
         soup = BeautifulSoup(r.text, 'html.parser')
-        year = soup.find('input', class_='showdate').attrs['value'][:4]
+        year = dt.now().year
 
         for v in soup.find_all('div', class_='col-md-12 col-sm-12 col-xs-12 trbox'):
             span = v.find_all('span')
