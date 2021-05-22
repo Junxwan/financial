@@ -280,6 +280,7 @@ def sp500(code, out):
 
         log(f"save {code} {date}")
 
+
 # 投信公會持股明細
 @cli.command('fund')
 @click.option('-y', '--year', type=click.INT, help="年")
@@ -287,8 +288,8 @@ def sp500(code, out):
 @click.option('-c', '--id', type=click.INT, help="卷商id")
 @click.option('-o', '--out', type=click.Path(), help="輸出")
 def get_fund(year, month, id, out):
-    data = []
     for ym, rows in fund.get(year=year, month=month, id=id).items():
+        data = []
         f = os.path.join(out, str(ym)) + ".csv"
 
         if os.path.exists(f):
@@ -303,11 +304,6 @@ def get_fund(year, month, id, out):
             data,
             columns=['c_name', 'f_name', 'code', 'name', 'amount', 'total', 'type']
         ).to_csv(f, index=False, encoding='utf_8_sig')
-
-
-#
-# get_fund('202104', None, 'D:\\data\\financial\\fund')
-# print('202104')
 
 
 # 新聞
