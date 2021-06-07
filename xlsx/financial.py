@@ -6,7 +6,7 @@ from sqlalchemy import engine
 from sqlalchemy.orm import Session
 
 
-# 損益表
+# 綜合損益表
 def profit(dataFrame: DataFrame, d: engine):
     imports({
         '營業收入合計': 'revenue',
@@ -64,6 +64,37 @@ def assetsDebt(dataFrame: DataFrame, d: engine):
         '權益總額': 'equity_total',
         '負債及權益總計': 'debt_equity_total',
     }, dataFrame, d, models.assetsDebt)
+
+
+# 現金流量表
+def cash(dataFrame: DataFrame, d: engine):
+    imports({
+        '本期稅前淨利（淨損）': 'profit_pre',
+        '折舊費用': 'depreciation',
+        '營業活動之淨現金流入（流出）': 'business_activity',
+        '取得不動產、廠房及設備': 'real_estate',
+        '投資活動之淨現金流入（流出）': 'investment_activity',
+        '籌資活動之淨現金流入（流出）': 'fundraising_activity',
+        '本期現金及約當現金增加（減少）數': 'cash_add',
+        '期初現金及約當現金餘額': 'start_cash_balance',
+        '期末現金及約當現金餘額': 'end_cash_balance',
+    }, dataFrame, d, models.cash)
+
+
+# 權益變動表
+def equity(dataFrame: DataFrame, d: engine):
+    imports({
+        '股本合計-期初餘額': 'start_stock',
+        '股本合計-期末餘額': 'end_stock',
+        '資本公積-期初餘額': 'start_capital_reserve',
+        '資本公積-期末餘額': 'end_capital_reserve',
+        '法定盈餘公積-期初餘額': 'start_surplus_reserve',
+        '法定盈餘公積-期末餘額': 'end_surplus_reserve',
+        '未分配盈餘（或待彌補虧損）-期初餘額': 'start_undistributed_surplus',
+        '未分配盈餘（或待彌補虧損）-期末餘額': 'end_undistributed_surplus',
+        '權益總額-期初餘額': 'start_equity',
+        '權益總額-期末餘額': 'end_equity',
+    }, dataFrame, d, models.equity)
 
 
 # 匯入財報
