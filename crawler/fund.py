@@ -96,11 +96,17 @@ def get(year=None, month=None, id=None):
 
 
 def _get(ym, id, soup):
+    __VIEWSTATE = soup.find('input', id='__VIEWSTATE')
+    if __VIEWSTATE is None:
+        __VIEWSTATE = ''
+    else:
+        __VIEWSTATE = __VIEWSTATE.attrs['value']
+
     r = requests.post("https://www.sitca.org.tw/ROC/Industry/IN2629.aspx", {
         "__EVENTTARGET": 'ctl00$ContentPlaceHolder1$ddlQ_YM',
         "__EVENTARGUMENT": '',
         "__LASTFOCUS": '',
-        "__VIEWSTATE": soup.find('input', id='__VIEWSTATE').attrs['value'],
+        "__VIEWSTATE": __VIEWSTATE,
         "__VIEWSTATEGENERATOR": soup.find('input', id='__VIEWSTATEGENERATOR').attrs['value'],
         "__EVENTVALIDATION": soup.find('input', id='__EVENTVALIDATION').attrs['value'],
         "ctl00$ContentPlaceHolder1$ddlQ_YM": ym,
