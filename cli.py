@@ -534,6 +534,8 @@ def import_to_database(type, path):
 
     if type == 'profit':
         financial.profit(data, d)
+    elif type == 'assetsDebt':
+        financial.assetsDebt(data, d)
 
 
 # 財報
