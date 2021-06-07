@@ -143,6 +143,63 @@ def month_revenue(dataFrame: DataFrame, d: engine):
             logging.info(f"save {year} month {month} {len(insert)} count")
 
 
+# 股利
+def dividend(dataFrame: DataFrame, d: engine):
+    q = Session(d)
+    header = {
+        '現金股利': 'cash',
+        '股票股利': 'stock',
+    }
+
+    data = {}
+    for f in dataFrame.groupby('code'):
+        code = f[0]
+        h = []
+
+        for v in f[1].items():
+            if v[0] == 'code':
+                continue
+
+            if v[0] == 'name':
+                h = [header[v] for v in list(v[1])]
+                continue
+
+            if v[0] not in data:
+                data[v[0]] = {}
+
+            data[v[0]][code] = {h[i]: a for i, a in enumerate(v[1])}
+
+    codes = {v.code: v.id for v in q.query(models.stock).all()}
+
+    for year, value in data.items():
+        exists = q.execute(
+            'SELECT `stocks`.`code` FROM dividends JOIN stocks ON stock_id = `stocks`.`id` WHERE year = :year',
+            {
+                'year': year,
+            }
+        ).all()
+
+        exists = [v.code for v in exists]
+
+        insert = []
+        for code, body in value.items():
+            if str(code) in exists:
+                continue
+
+            body['stock_id'] = codes[str(code)]
+            body['year'] = year
+            insert.append(body)
+
+        if len(insert) < 1:
+            continue
+
+        result = d.execute(models.dividend.insert(), insert)
+        if result.is_insert == False or result.rowcount != len(insert):
+            logging.info("insert error")
+        else:
+            logging.info(f"save {year} year {year} {len(insert)} count")
+
+
 # 匯入財報
 def imports(header, dataFrame: DataFrame, d: engine, model: schema):
     data = {}

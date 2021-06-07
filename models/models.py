@@ -131,3 +131,11 @@ revenue = Table('revenues', metadata,
                 Column('month', Integer),
                 Column('value', BigInteger),
                 )
+
+dividend = Table('dividends', metadata,
+                 Column('id', Integer, primary_key=True),
+                 Column('stock_id', Integer),
+                 Column('year', Date),
+                 Column('cash', Float),
+                 Column('stock', Float),
+                 )

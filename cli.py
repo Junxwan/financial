@@ -542,7 +542,8 @@ def import_to_database(type, path):
         financial.equity(data, d)
     elif type == 'revenue':
         financial.month_revenue(data, d)
-
+    elif type == 'dividend':
+        financial.dividend(data, d)
 
 # 財報
 def _get_financial(year, season, outpath, type):
