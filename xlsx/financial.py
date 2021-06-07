@@ -97,9 +97,56 @@ def equity(dataFrame: DataFrame, d: engine):
     }, dataFrame, d, models.equity)
 
 
+# 月營收
+def month_revenue(dataFrame: DataFrame, d: engine):
+    code = []
+    codes = {v.code: v.id for v in Session(d).query(models.stock).all()}
+    for k, v in dataFrame.items():
+        if k == 'code':
+            code = v
+            continue
+        year = k[:4]
+        month = int(k[4:])
+
+        q = Session(d)
+        exists = q.execute(
+            'SELECT `stocks`.`code` FROM ' + 'revenues' + ' JOIN stocks ON stock_id = `stocks`.`id` WHERE year = :year AND month = :month',
+            {
+                'year': year,
+                'month': month,
+            }
+        ).all()
+
+        exists = [v.code for v in exists]
+
+        q.close()
+
+        insert = []
+        for i, r in enumerate(v):
+            if str(code[i]) in exists or r == 0:
+                continue
+
+            insert.append({
+                'stock_id': codes[str(code[i])],
+                'year': year,
+                'month': month,
+                'value': r,
+            })
+
+        if len(insert) < 1:
+            continue
+
+        result = d.execute(models.revenue.insert(), insert)
+        if result.is_insert == False or result.rowcount != len(insert):
+            logging.info("insert error")
+        else:
+            logging.info(f"save {year} month {month} {len(insert)} count")
+
+
 # 匯入財報
 def imports(header, dataFrame: DataFrame, d: engine, model: schema):
     data = {}
+    q = Session(d)
 
     for f in dataFrame.groupby('code'):
         code = f[0]
@@ -118,14 +165,14 @@ def imports(header, dataFrame: DataFrame, d: engine, model: schema):
 
             data[v[0]][code] = {h[i]: a for i, a in enumerate(v[1])}
 
-    codes = {v.code: v.id for v in Session(d).query(models.stock).all()}
+    codes = {v.code: v.id for v in q.query(models.stock).all()}
 
     for ys, items in data.items():
         insert = []
         year = ys[:4]
         season = ys[-1]
 
-        exists = Session(d).execute(
+        exists = q.execute(
             'SELECT `stocks`.`code` FROM ' + model.name + ' JOIN stocks ON stock_id = `stocks`.`id` WHERE year = :year AND season = :season',
             {
                 'year': year,

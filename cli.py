@@ -540,6 +540,8 @@ def import_to_database(type, path):
         financial.cash(data, d)
     elif type == 'equity':
         financial.equity(data, d)
+    elif type == 'revenue':
+        financial.month_revenue(data, d)
 
 
 # 財報

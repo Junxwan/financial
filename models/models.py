@@ -123,3 +123,11 @@ equity = Table('equitys', metadata,
                Column('start_equity', BigInteger),
                Column('end_equity', BigInteger),
                )
+
+revenue = Table('revenues', metadata,
+                Column('id', Integer, primary_key=True),
+                Column('stock_id', Integer),
+                Column('year', Date),
+                Column('month', Integer),
+                Column('value', BigInteger),
+                )
