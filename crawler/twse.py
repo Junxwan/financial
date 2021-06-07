@@ -24,19 +24,20 @@ def month_revenue(year, month):
     revenue = []
     year = year - 1911
 
-    try:
-        for n in t:
-            r = requests.get(f"https://mops.twse.com.tw/nas/t21/{n[0]}/t21sc03_{year}_{month}_{n[1]}.html",
-                             headers=HEADERS)
-            r.encoding = 'big5-hkscs'
+    for n in t:
+        r = requests.get(f"https://mops.twse.com.tw/nas/t21/{n[0]}/t21sc03_{year}_{month}_{n[1]}.html",
+                         headers=HEADERS)
+        r.encoding = 'big5-hkscs'
 
+        try:
             table = pd.read_html(StringIO(r.text), encoding='big5-hkscs')
-            data = pd.concat([df for df in table if df.shape[1] == 11])
-            revenue = revenue + data.iloc[:, :3].to_numpy().tolist()
+        except Exception as e:
+            continue
 
-            time.sleep(6)
-    except Exception as e:
-        return None
+        data = pd.concat([df for df in table if df.shape[1] == 11])
+        revenue = revenue + data.iloc[:, :3].to_numpy().tolist()
+
+        time.sleep(6)
 
     revenue = pd.DataFrame(revenue, columns=['code', 'name', 'value']).sort_values(by=['code'])
     return revenue[revenue['code'] != '合計']
