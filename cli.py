@@ -19,7 +19,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import create_engine
 from configparser import ConfigParser
 from datetime import datetime, timedelta
-from xlsx import twse as xtwse
+from xlsx import twse as xtwse, financial
 from jinja2 import Template
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -81,6 +81,12 @@ def render(html, **kwargs):
     return Template(
         _read_template(html)
     ).render(**kwargs)
+
+
+def db():
+    db = conf['databases']
+    return create_engine(f"mysql+pymysql://{db['user']}:{db['password']}@{db['host']}:{db['port']}/{db['table']}",
+                         encoding='utf8')
 
 
 @click.group()
@@ -516,6 +522,18 @@ def new_email_import(input):
         error('insert error')
     else:
         log(f"save {len(insert)} count")
+
+
+# 匯入財報
+@cli.command('import-to-database')
+@click.option('-t', '--type', type=click.STRING, help="類型")
+@click.option('-i', '--path', type=click.Path(), help="輸入檔案路徑")
+def import_to_database(type, path):
+    data = pd.read_csv(path)
+    d = db()
+
+    if type == 'profit':
+        financial.profit(data, d)
 
 
 # 財報
