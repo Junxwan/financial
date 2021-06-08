@@ -4,3 +4,4 @@ venv
 log/*
 bin
 config.ini
+config-prd.ini

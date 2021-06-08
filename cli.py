@@ -83,7 +83,11 @@ def render(html, **kwargs):
     ).render(**kwargs)
 
 
-def db():
+def db(file=None):
+    if file is not None:
+        log(f"read config {file}")
+        conf.read(file)
+
     db = conf['databases']
     return create_engine(f"mysql+pymysql://{db['user']}:{db['password']}@{db['host']}:{db['port']}/{db['table']}",
                          encoding='utf8')
@@ -528,22 +532,42 @@ def new_email_import(input):
 @cli.command('import-to-database')
 @click.option('-t', '--type', type=click.STRING, help="類型")
 @click.option('-i', '--path', type=click.Path(), help="輸入檔案路徑")
-def import_to_database(type, path):
-    data = pd.read_csv(path)
-    d = db()
+@click.option('-d', '--dir', type=click.Path(), help="輸入檔案目錄")
+@click.option('-c', '--config', type=click.STRING, help="config")
+def import_to_database(type, path, dir, config):
+    d = db(file=config)
 
-    if type == 'profit':
-        financial.profit(data, d)
-    elif type == 'assetsDebt':
-        financial.assetsDebt(data, d)
-    elif type == 'cash':
-        financial.cash(data, d)
-    elif type == 'equity':
-        financial.equity(data, d)
-    elif type == 'revenue':
-        financial.month_revenue(data, d)
-    elif type == 'dividend':
-        financial.dividend(data, d)
+    fileName = {
+        "profit": "綜合損益表.csv",
+        "assetsDebt": "資產負債表.csv",
+        "cash": "現金流量表.csv",
+        "equity": "權益變動表.csv",
+        "revenue": "月營收.csv",
+        "dividend": "股利.csv",
+    }
+
+    if (dir is None):
+        paths = {type: path}
+    else:
+        paths = {name: os.path.join(dir, path) for name, path in fileName.items()}
+
+    for type, path in paths.items():
+        log(f"read {type} {path}")
+        data = pd.read_csv(path)
+
+        if type == 'profit':
+            financial.profit(data, d)
+        elif type == 'assetsDebt':
+            financial.assetsDebt(data, d)
+        elif type == 'cash':
+            financial.cash(data, d)
+        elif type == 'equity':
+            financial.equity(data, d)
+        elif type == 'revenue':
+            financial.month_revenue(data, d)
+        elif type == 'dividend':
+            financial.dividend(data, d)
+
 
 # 財報
 def _get_financial(year, season, outpath, type):
