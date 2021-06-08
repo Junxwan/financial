@@ -568,7 +568,6 @@ def import_to_database(type, path, dir, config):
         elif type == 'dividend':
             financial.dividend(data, d)
 
-
 # 財報
 def _get_financial(year, season, outpath, type):
     if season == 0:

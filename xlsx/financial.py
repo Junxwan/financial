@@ -96,6 +96,28 @@ def equity(dataFrame: DataFrame, d: engine):
         '權益總額-期末餘額': 'end_equity',
     }, dataFrame, d, models.equity)
 
+    q = Session(d)
+    yq = dataFrame.columns[2]
+
+    stock = q.execute(
+        'SELECT `stocks`.`code`, `equitys`.`end_stock` FROM equitys JOIN stocks ON stock_id = `stocks`.`id` WHERE year = :year AND season = :season',
+        {
+            'year': yq[:4],
+            'season': yq[-1],
+        }
+    ).all()
+
+    data = ""
+    for v in stock:
+        data += f"WHEN code = '{v.code}' THEN {v.end_stock} "
+
+    aff = q.execute("UPDATE stocks SET capital = CASE " + data + " ELSE 0 END")
+
+    logging.info(f"update capital count: {aff.rowcount}")
+
+    q.commit()
+    q.close()
+
 
 # 月營收
 def month_revenue(dataFrame: DataFrame, d: engine):
