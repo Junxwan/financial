@@ -107,7 +107,7 @@ cash = Table('cashs', metadata,
              Column('end_cash_balance', BigInteger),
              )
 
-equity = Table('equitys', metadata,
+equity = Table('equities', metadata,
                Column('id', Integer, primary_key=True),
                Column('stock_id', Integer),
                Column('year', Date),
