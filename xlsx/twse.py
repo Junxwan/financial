@@ -42,26 +42,26 @@ def month_revenue(path, toPath):
 def merge(path, toPath, columns, name):
     data = {}
 
-    seasons = []
+    quarterlys = []
     codes = []
 
     for p in glob.glob(os.path.join(path, "*", "*.csv")):
         tmp = {}
         code = os.path.basename(p).split('.')[0]
-        season = os.path.dirname(p).split(os.path.sep)[-1]
+        quarterly = os.path.dirname(p).split(os.path.sep)[-1]
         v = pd.read_csv(p)
 
         if code not in codes:
             codes.append(code)
 
-        if season not in seasons:
-            seasons.append(season)
+        if quarterly not in quarterlys:
+            quarterlys.append(quarterly)
 
         if code not in data:
             data[code] = {}
 
-        if season not in data[code]:
-            data[code][season] = []
+        if quarterly not in data[code]:
+            data[code][quarterly] = []
 
         n = [c.replace("／", "∕") for c in v['項目'].tolist()]
         m = v['金額']
@@ -77,11 +77,11 @@ def merge(path, toPath, columns, name):
 
                 tmp[c] = m[i]
 
-        data[code][season] = tmp
+        data[code][quarterly] = tmp
 
-        logging.info(f"read {code} {season} {name}...")
+        logging.info(f"read {code} {quarterly} {name}...")
 
-    seasons.sort(reverse=True)
+    quarterlys.sort(reverse=True)
     codes.sort()
 
     index = pd.MultiIndex.from_product([codes, columns], names=['code', 'name'])
@@ -91,17 +91,17 @@ def merge(path, toPath, columns, name):
         for column in columns:
             v = []
 
-            for season in seasons:
-                if season not in data[code]:
+            for quarterly in quarterlys:
+                if quarterly not in data[code]:
                     v.append(0)
                 else:
-                    v.append(data[code][season][column])
+                    v.append(data[code][quarterly][column])
 
             csv.append(v)
 
         logging.info(f"save {code} {name}...")
 
-    pd.DataFrame(csv, index=index, columns=seasons).to_csv(os.path.join(toPath, f"{name}.csv"), encoding="utf_8_sig")
+    pd.DataFrame(csv, index=index, columns=quarterlys).to_csv(os.path.join(toPath, f"{name}.csv"), encoding="utf_8_sig")
 
 
 # 資產負債表
@@ -202,26 +202,26 @@ def changes_inEquity(path, toPath):
 
     data = {}
 
-    seasons = []
+    quarterlys = []
     codes = []
 
     for p in glob.glob(os.path.join(path, "*", "*.csv")):
         tmp = {}
         code = os.path.basename(p).split('.')[0]
-        season = os.path.dirname(p).split(os.path.sep)[-1]
+        quarterly = os.path.dirname(p).split(os.path.sep)[-1]
         v = pd.read_csv(p)
 
         if code not in codes:
             codes.append(code)
 
-        if season not in seasons:
-            seasons.append(season)
+        if quarterly not in quarterlys:
+            quarterlys.append(quarterly)
 
         if code not in data:
             data[code] = {}
 
-        if season not in data[code]:
-            data[code][season] = []
+        if quarterly not in data[code]:
+            data[code][quarterly] = []
 
         item = v['會計項目'].tolist()
         c = v.columns.tolist()
@@ -234,11 +234,11 @@ def changes_inEquity(path, toPath):
 
             tmp[f"{k[0]}-{k[1]}"] = b
 
-        data[code][season] = tmp
+        data[code][quarterly] = tmp
 
-        logging.info(f"read {code} {season} 權益變動表...")
+        logging.info(f"read {code} {quarterly} 權益變動表...")
 
-    seasons.sort(reverse=True)
+    quarterlys.sort(reverse=True)
     codes.sort()
     columns = [f"{k[0]}-{k[1]}" for k in columns]
 
@@ -249,17 +249,17 @@ def changes_inEquity(path, toPath):
         for column in columns:
             v = []
 
-            for season in seasons:
-                if season not in data[code]:
+            for quarterly in quarterlys:
+                if quarterly not in data[code]:
                     v.append(0)
                 else:
-                    v.append(data[code][season][column])
+                    v.append(data[code][quarterly][column])
 
             csv.append(v)
 
         logging.info(f"save {code} 權益變動表...")
 
-    pd.DataFrame(csv, index=index, columns=seasons).to_csv(os.path.join(toPath, "權益變動表.csv"), encoding="utf_8_sig")
+    pd.DataFrame(csv, index=index, columns=quarterlys).to_csv(os.path.join(toPath, "權益變動表.csv"), encoding="utf_8_sig")
 
 
 # 月收盤價

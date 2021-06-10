@@ -100,10 +100,10 @@ def equity(dataFrame: DataFrame, d: engine):
     yq = dataFrame.columns[2]
 
     stock = q.execute(
-        'SELECT `stocks`.`code`, `equitys`.`end_stock` FROM equities JOIN stocks ON stock_id = `stocks`.`id` WHERE year = :year AND season = :season',
+        'SELECT `stocks`.`code`, `equitys`.`end_stock` FROM equities JOIN stocks ON stock_id = `stocks`.`id` WHERE year = :year AND quarterly = :quarterly',
         {
             'year': yq[:4],
-            'season': yq[-1],
+            'quarterly': yq[-1],
         }
     ).all()
 
@@ -249,13 +249,13 @@ def imports(header, dataFrame: DataFrame, d: engine, model: schema):
     for ys, items in data.items():
         insert = []
         year = ys[:4]
-        season = ys[-1]
+        quarterly = ys[-1]
 
         exists = q.execute(
-            'SELECT `stocks`.`code` FROM ' + model.name + ' JOIN stocks ON stock_id = `stocks`.`id` WHERE year = :year AND season = :season',
+            'SELECT `stocks`.`code` FROM ' + model.name + ' JOIN stocks ON stock_id = `stocks`.`id` WHERE year = :year AND quarterly = :quarterly',
             {
                 'year': year,
-                'season': season,
+                'quarterly': quarterly,
             }
         ).all()
 
@@ -267,7 +267,7 @@ def imports(header, dataFrame: DataFrame, d: engine, model: schema):
 
             value['stock_id'] = codes[str(code)]
             value['year'] = year
-            value['season'] = season
+            value['quarterly'] = quarterly
             insert.append(value)
 
         if len(insert) < 1:
@@ -277,4 +277,4 @@ def imports(header, dataFrame: DataFrame, d: engine, model: schema):
         if result.is_insert == False or result.rowcount != len(insert):
             logging.info("insert error")
         else:
-            logging.info(f"save {year} Q{season} {len(insert)} count")
+            logging.info(f"save {year} Q{quarterly} {len(insert)} count")
