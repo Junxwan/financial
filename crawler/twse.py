@@ -140,32 +140,31 @@ def consolidated_income_statement(code, year, season):
     table = table[-1]
     columns = table.columns.tolist()[1:]
 
-    d = columns[0][2]
-
-    if len(d) == 21:
-        if d[4:6] == '01' and d[15:17] == '03':
-            s = "Q1"
-        elif d[4:6] == '01' and d[15:17] == '06':
+    for i, d in enumerate([columns[0][2], columns[2][2]]):
+        if len(d) == 21:
+            if d[4:6] == '01' and d[15:17] == '03':
+                s = "Q1"
+            elif d[4:6] == '01' and d[15:17] == '06':
+                s = "Q2"
+            elif d[4:6] == '01' and d[15:17] == '09':
+                s = "Q3"
+            else:
+                return {}
+        elif len(d) == 7:
+            s = f"Q{d[5:6]}"
+        elif len(d) == 5:
+            s = "Q4"
+        elif d[3:] == '年上半年度':
             s = "Q2"
-        elif d[4:6] == '01' and d[15:17] == '09':
-            s = "Q3"
+        elif d[3:] == '年度':
+            s = "Q4"
         else:
             return {}
-    elif len(d) == 7:
-        s = f"Q{d[5:6]}"
-    elif len(d) == 5:
-        s = "Q4"
-    elif d[3:] == '年上半年度':
-        s = "Q2"
-    elif d[3:] == '年度':
-        s = "Q4"
-    else:
-        return {}
 
-    data[f"{int(d[:3]) + 1911}{s}"] = pd.DataFrame(
-        table.iloc[:, [0, 1, 2]].to_numpy().tolist(),
-        columns=['項目', '金額', '%']
-    )
+        data[f"{int(d[:3]) + 1911}{s}"] = pd.DataFrame(
+            table.iloc[:, [0, 1 + (2 * i), 2 + (2 * i)]].to_numpy().tolist(),
+            columns=['項目', '金額', '%']
+        )
 
     return data
 
