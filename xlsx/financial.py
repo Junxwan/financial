@@ -100,7 +100,7 @@ def equity(dataFrame: DataFrame, d: engine):
     yq = dataFrame.columns[2]
 
     stock = q.execute(
-        'SELECT `stocks`.`code`, `equitys`.`end_stock` FROM equities JOIN stocks ON stock_id = `stocks`.`id` WHERE year = :year AND quarterly = :quarterly',
+        'SELECT `stocks`.`code`, `equities`.`end_stock` FROM equities JOIN stocks ON stock_id = `stocks`.`id` WHERE year = :year AND quarterly = :quarterly',
         {
             'year': yq[:4],
             'quarterly': yq[-1],
