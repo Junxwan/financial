@@ -139,3 +139,16 @@ dividend = Table('dividends', metadata,
                  Column('cash', Float),
                  Column('stock', Float),
                  )
+
+price = Table('prices', metadata,
+              Column('id', Integer, primary_key=True),
+              Column('stock_id', Integer),
+              Column('date', Date),
+              Column('open', Float),
+              Column('close', Float),
+              Column('high', Float),
+              Column('low', Float),
+              Column('increase', Float),
+              Column('amplitude', Float),
+              Column('volume', BigInteger),
+              )

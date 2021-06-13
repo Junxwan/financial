@@ -3,7 +3,10 @@ import time
 import logging
 import pandas as pd
 from io import StringIO
+from models import models
 from bs4 import BeautifulSoup
+from sqlalchemy import engine
+from sqlalchemy.orm import Session
 
 USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/85.0.4183.83 Safari/537.36'
 
@@ -382,3 +385,64 @@ def news(end_date):
         })
 
     return news
+
+
+# 加權指數
+def tse(d: engine):
+    r = requests.get('https://www.twse.com.tw/indicesReport/MI_5MINS_HIST?response=html')
+
+    r.encoding = 'utf8'
+    table = pd.read_html(r.text)
+
+    if (len(table) == 0):
+        return True
+
+    table = table[0].iloc[-1:].iloc[0]
+    date = f"{int(table.iloc[0][:3]) + 1911}-{table.iloc[0][4:6]}-{table.iloc[0][7:9]}"
+
+    session = Session(d)
+    stock = session.execute('SELECT id, code FROM stocks WHERE code = :code', {'code': 'TSE'}).first()
+    price = session.execute('SELECT id, date, close FROM prices WHERE stock_id = :id order by date desc limit 1',
+                            {'id': stock.id}).first()
+
+    if (price.date.__str__() == date):
+        return True
+
+    r = requests.get('https://www.twse.com.tw/exchangeReport/FMTQIK?response=html')
+
+    r.encoding = 'utf8'
+    table1 = pd.read_html(r.text)
+
+    if (len(table1) == 0):
+        return True
+
+    table1 = table1[0].iloc[-1:].iloc[0]
+    date1 = f"{int(table1.iloc[0][:3]) + 1911}-{table1.iloc[0][4:6]}-{table1.iloc[0][7:9]}"
+
+    if (date != date1):
+        return False
+
+    insert = [
+        {
+            'stock_id': stock.id,
+            'date': date,
+            'open': table.iloc[1],
+            'high': table.iloc[2],
+            'low': table.iloc[3],
+            'close': table.iloc[4],
+            'increase': round((table1.iloc[-1] / price.close) * 100, 2),
+            'amplitude': round(table.iloc[2] / table.iloc[3], 2),
+            'volume': int(table1.iloc[2]),
+        }
+    ]
+
+    if (len(insert) > 0):
+        result = session.execute(models.price.insert(), insert)
+
+        if result.is_insert == False or result.rowcount != len(insert):
+            logging.error('insert error')
+            return False
+        else:
+            session.commit()
+
+    return True

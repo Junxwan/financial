@@ -45,10 +45,12 @@ DIVIDEND = 'dividend'
 # 財報種類
 FINANCIAL_TYPE = ['all', BALANCE_SHEET, CONSOLIDATED_INCOME_STATEMENT, CASH_FLOW_STATEMENT, CHANGES_IN_EQUITY]
 
-# 合併種類
+# 財報合併種類
 MERGE_TYPE = ['all', MONTH_REVENUE, BALANCE_SHEET, CONSOLIDATED_INCOME_STATEMENT, CASH_FLOW_STATEMENT,
               CHANGES_IN_EQUITY,
               DIVIDEND]
+
+EXPONENT = ['TSE']
 
 year = datetime.now().year
 month = datetime.now().month
@@ -256,6 +258,17 @@ def merge_financial(input):
             v.to_excel(writer, sheet_name=k, index=False)
 
     log("合併財報完成")
+
+
+# 股價
+@cli.command('price')
+@click.option('-t', '--type', default='all', type=click.Choice(EXPONENT, case_sensitive=False), help="指數類型")
+@click.option('-c', '--config', type=click.STRING, help="config")
+def price(type, config):
+    d = db(file=config)
+
+    if (type == 'TSE'):
+        twse.tse(d)
 
 
 # 面板報價
