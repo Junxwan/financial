@@ -50,7 +50,7 @@ MERGE_TYPE = ['all', MONTH_REVENUE, BALANCE_SHEET, CONSOLIDATED_INCOME_STATEMENT
               CHANGES_IN_EQUITY,
               DIVIDEND]
 
-EXPONENT = ['TSE']
+EXPONENT = ['TSE', 'OTC']
 
 year = datetime.now().year
 month = datetime.now().month
@@ -261,15 +261,19 @@ def merge_financial(input):
 
 
 # 股價
-@cli.command('price')
-@click.option('-t', '--type', default='all', type=click.Choice(EXPONENT, case_sensitive=False), help="指數類型")
-@click.option('-c', '--config', type=click.STRING, help="config")
+# @cli.command('price')
+# @click.option('-t', '--type', default='all', type=click.Choice(EXPONENT, case_sensitive=False), help="指數類型")
+# @click.option('-c', '--config', type=click.STRING, help="config")
 def price(type, config):
     d = db(file=config)
 
     if (type == 'TSE'):
         twse.tse(d)
+    elif (type == 'OTC'):
+        twse.otc(d)
 
+
+price('OTC', '')
 
 # 面板報價
 @cli.command('wits_view')

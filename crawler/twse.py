@@ -389,7 +389,7 @@ def news(end_date):
 
 # 加權指數
 def tse(d: engine):
-    r = requests.get('https://www.twse.com.tw/indicesReport/MI_5MINS_HIST?response=html')
+    r = requests.get('https://www.twse.com.tw/indicesReport/MI_5MINS_HIST?response=html', headers=HEADERS)
 
     r.encoding = 'utf8'
     table = pd.read_html(r.text)
@@ -430,9 +430,68 @@ def tse(d: engine):
             'high': table.iloc[2],
             'low': table.iloc[3],
             'close': table.iloc[4],
-            'increase': round((table1.iloc[-1] / price.close) * 100, 2),
+            'increase': round((table1.iloc[-1] / table.iloc[4]) * 100, 2),
             'amplitude': round(table.iloc[2] / table.iloc[3], 2),
             'volume': int(table1.iloc[2]),
+        }
+    ]
+
+    if (len(insert) > 0):
+        result = session.execute(models.price.insert(), insert)
+
+        if result.is_insert == False or result.rowcount != len(insert):
+            logging.error('insert error')
+            return False
+        else:
+            session.commit()
+
+    return True
+
+
+# 櫃買
+def otc(d: engine):
+    r = requests.get('https://www.tpex.org.tw/web/stock/iNdex_info/inxh/Inx_result.php?l=zh-tw&s=0,asc,0&o=htm',
+                     headers=HEADERS)
+
+    r.encoding = 'utf8'
+    table = pd.read_html(r.text)
+
+    if (len(table) == 0):
+        return True
+
+    table = table[0].iloc[-2:-1].iloc[0]
+    date = f"{int(table.iloc[0][:4])}-{table.iloc[0][5:7]}-{table.iloc[0][8:10]}"
+
+    session = Session(d)
+    stock = session.execute('SELECT id, code FROM stocks WHERE code = :code', {'code': 'OTC'}).first()
+    price = session.execute('SELECT id, date, close FROM prices WHERE stock_id = :id order by date desc limit 1',
+                            {'id': stock.id}).first()
+
+    if (price.date.__str__() == date):
+        return True
+
+    r = requests.get(f"https://mis.twse.com.tw/stock/api/getStatis.jsp?ex=otc&delay=0&_={int(time.time()) * 1000}",
+                     headers={
+                         'User-Agent': USER_AGENT,
+                         'host': 'mis.twse.com.tw',
+                     })
+
+    table1 = r.json()
+
+    if (table1['queryTime']['sessionKey'] != f"otc_{date[:4]}{date[5:7]}{date[8:10]}"):
+        return False
+
+    insert = [
+        {
+            'stock_id': stock.id,
+            'date': date,
+            'open': table.iloc[1],
+            'high': table.iloc[2],
+            'low': table.iloc[3],
+            'close': table.iloc[4],
+            'increase': round((float(table.iloc[-1]) / float(table.iloc[4])) * 100, 2),
+            'amplitude': round(float(table.iloc[2]) / float(table.iloc[3]), 2),
+            'volume': table1['detail']['tz'],
         }
     ]
 
