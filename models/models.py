@@ -151,4 +151,5 @@ price = Table('prices', metadata,
               Column('increase', Float),
               Column('amplitude', Float),
               Column('volume', BigInteger),
+              Column('volume_ratio', Float),
               )

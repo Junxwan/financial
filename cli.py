@@ -19,7 +19,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import create_engine
 from configparser import ConfigParser
 from datetime import datetime, timedelta
-from xlsx import twse as xtwse, financial
+from xlsx import twse as xtwse, financial, export as csv
 from jinja2 import Template
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -50,7 +50,7 @@ MERGE_TYPE = ['all', MONTH_REVENUE, BALANCE_SHEET, CONSOLIDATED_INCOME_STATEMENT
               CHANGES_IN_EQUITY,
               DIVIDEND]
 
-EXPONENT = ['TSE', 'OTC']
+EXPONENT = ['TSE', 'OTC', 'TSE_INDUSTRY', 'OTC_INDUSTRY', 'XQ_INDUSTRY']
 
 year = datetime.now().year
 month = datetime.now().month
@@ -261,19 +261,22 @@ def merge_financial(input):
 
 
 # 股價
-# @cli.command('price')
-# @click.option('-t', '--type', default='all', type=click.Choice(EXPONENT, case_sensitive=False), help="指數類型")
-# @click.option('-c', '--config', type=click.STRING, help="config")
-def price(type, config):
+@cli.command('price')
+@click.option('-t', '--type', default='all', type=click.Choice(EXPONENT, case_sensitive=False), help="指數類型")
+@click.option('-p', '--path', type=click.Path(), help="檔案輸入路徑")
+@click.option('-c', '--config', type=click.STRING, help="config")
+def price(type, path, config):
     d = db(file=config)
 
-    if (type == 'TSE'):
-        twse.tse(d)
-    elif (type == 'OTC'):
-        twse.otc(d)
+    if (type in ['TSE', 'OTC']):
+        twse.exponent(type, d)
+    elif (type == 'TSE_INDUSTRY'):
+        twse.tse_industry(d)
+    elif (type == 'OTC_INDUSTRY'):
+        twse.otc_industry(d)
+    elif (type == 'XQ_INDUSTRY'):
+        twse.xq_industry(path, d)
 
-
-price('OTC', '')
 
 # 面板報價
 @cli.command('wits_view')
@@ -587,6 +590,22 @@ def import_to_database(type, path, dir, config):
             financial.month_revenue(data, d)
         elif type == 'dividend':
             financial.dividend(data, d)
+
+
+# 匯出
+# @cli.command('export')
+# @click.option('-t', '--type', type=click.STRING, help="類型")
+# @click.option('-o', '--out', type=click.Path(), help="輸出")
+# @click.option('-d', '--date', type=click.STRING, help="日期")
+# @click.option('-c', '--config', type=click.STRING, help="config")
+def export(type, out, date, config):
+    d = db(file=config)
+
+    if (type == 'tse_industry'):
+        csv.tse_industry(date, out, d)
+
+
+export('tse_industry', 'D:\\data', '2015-01-01', None)
 
 
 # 財報
