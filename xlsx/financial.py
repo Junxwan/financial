@@ -1,4 +1,6 @@
+import os
 import logging
+import pandas as pd
 from models import models
 from pandas import DataFrame
 from sqlalchemy import schema
@@ -6,9 +8,43 @@ from sqlalchemy import engine
 from sqlalchemy.orm import Session
 
 
+# 匯入財報
+def imports(type, path=None, dir=None, d: engine = None):
+    fileName = {
+        "profit": "綜合損益表.csv",
+        "assetsDebt": "資產負債表.csv",
+        "cash": "現金流量表.csv",
+        "equity": "權益變動表.csv",
+        "revenue": "月營收.csv",
+        "dividend": "股利.csv",
+    }
+
+    if (dir is None):
+        paths = {type: path}
+    else:
+        paths = {name: os.path.join(dir, path) for name, path in fileName.items()}
+
+    for type, path in paths.items():
+        logging.info(f"read {type} {path}")
+        data = pd.read_csv(path)
+
+        if type == 'profit':
+            profit(data, d)
+        elif type == 'assetsDebt':
+            assetsDebt(data, d)
+        elif type == 'cash':
+            cash(data, d)
+        elif type == 'equity':
+            equity(data, d)
+        elif type == 'revenue':
+            month_revenue(data, d)
+        elif type == 'dividend':
+            dividend(data, d)
+
+
 # 綜合損益表
 def profit(dataFrame: DataFrame, d: engine):
-    imports({
+    _import({
         '營業收入合計': 'revenue',
         '營業成本合計': 'cost',
         '營業毛利（毛損）': 'gross',
@@ -33,7 +69,7 @@ def profit(dataFrame: DataFrame, d: engine):
 
 # 資產負責表
 def assetsDebt(dataFrame: DataFrame, d: engine):
-    imports({
+    _import({
         '現金及約當現金': 'cash',
         '存貨': 'stock',
         '應收票據淨額': 'bill_receivable',
@@ -68,7 +104,7 @@ def assetsDebt(dataFrame: DataFrame, d: engine):
 
 # 現金流量表
 def cash(dataFrame: DataFrame, d: engine):
-    imports({
+    _import({
         '本期稅前淨利（淨損）': 'profit_pre',
         '折舊費用': 'depreciation',
         '營業活動之淨現金流入（流出）': 'business_activity',
@@ -83,7 +119,7 @@ def cash(dataFrame: DataFrame, d: engine):
 
 # 權益變動表
 def equity(dataFrame: DataFrame, d: engine):
-    imports({
+    _import({
         '股本合計-期初餘額': 'start_stock',
         '股本合計-期末餘額': 'end_stock',
         '資本公積-期初餘額': 'start_capital_reserve',
@@ -223,7 +259,7 @@ def dividend(dataFrame: DataFrame, d: engine):
 
 
 # 匯入財報
-def imports(header, dataFrame: DataFrame, d: engine, model: schema):
+def _import(header, dataFrame: DataFrame, d: engine, model: schema):
     data = {}
     q = Session(d)
 

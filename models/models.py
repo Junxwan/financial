@@ -153,3 +153,23 @@ price = Table('prices', metadata,
               Column('volume', BigInteger),
               Column('volume_ratio', Float),
               )
+company = Table('companies', metadata,
+                Column('id', Integer, primary_key=True),
+                Column('name', Text),
+                )
+
+fund = Table('funds', metadata,
+             Column('id', Integer, primary_key=True),
+             Column('company_id', Integer),
+             Column('name', Text),
+             )
+
+fundStock = Table('fund_stocks', metadata,
+                  Column('id', Integer, primary_key=True),
+                  Column('fund_id', Integer),
+                  Column('stock_id', Integer),
+                  Column('year', Date),
+                  Column('month', Integer),
+                  Column('amount', BigInteger),
+                  Column('ratio', Float),
+                  )

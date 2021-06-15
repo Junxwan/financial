@@ -19,7 +19,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import create_engine
 from configparser import ConfigParser
 from datetime import datetime, timedelta
-from xlsx import twse as xtwse, financial, export as csv
+from xlsx import twse as xtwse, financial, export as csv, fund
 from jinja2 import Template
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -551,61 +551,37 @@ def new_email_import(input):
         log(f"save {len(insert)} count")
 
 
-# 匯入財報
+# 匯入資料到db
 @cli.command('import-to-database')
 @click.option('-t', '--type', type=click.STRING, help="類型")
 @click.option('-i', '--path', type=click.Path(), help="輸入檔案路徑")
 @click.option('-d', '--dir', type=click.Path(), help="輸入檔案目錄")
+@click.option('-y', '--year', type=click.INT, help="年")
+@click.option('-m', '--month', type=click.INT, help="月")
 @click.option('-c', '--config', type=click.STRING, help="config")
-def import_to_database(type, path, dir, config):
+def imports(type, path, dir, year, month, config):
     d = db(file=config)
 
-    fileName = {
-        "profit": "綜合損益表.csv",
-        "assetsDebt": "資產負債表.csv",
-        "cash": "現金流量表.csv",
-        "equity": "權益變動表.csv",
-        "revenue": "月營收.csv",
-        "dividend": "股利.csv",
-    }
+    if type in ['profit', 'assetsDebt', 'cash', 'equity', 'revenue', 'dividend']:
+        financial.imports(type, path=path, dir=dir, d=d)
+    elif type == 'fund':
+        fund.imports(year, month, dir, d)
 
-    if (dir is None):
-        paths = {type: path}
-    else:
-        paths = {name: os.path.join(dir, path) for name, path in fileName.items()}
 
-    for type, path in paths.items():
-        log(f"read {type} {path}")
-        data = pd.read_csv(path)
-
-        if type == 'profit':
-            financial.profit(data, d)
-        elif type == 'assetsDebt':
-            financial.assetsDebt(data, d)
-        elif type == 'cash':
-            financial.cash(data, d)
-        elif type == 'equity':
-            financial.equity(data, d)
-        elif type == 'revenue':
-            financial.month_revenue(data, d)
-        elif type == 'dividend':
-            financial.dividend(data, d)
+# imports('fund', '', 'D:\\data\\financial\\fund', 2021, None, None)
 
 
 # 匯出
-# @cli.command('export')
-# @click.option('-t', '--type', type=click.STRING, help="類型")
-# @click.option('-o', '--out', type=click.Path(), help="輸出")
-# @click.option('-d', '--date', type=click.STRING, help="日期")
-# @click.option('-c', '--config', type=click.STRING, help="config")
+@cli.command('export')
+@click.option('-t', '--type', type=click.STRING, help="類型")
+@click.option('-o', '--out', type=click.Path(), help="輸出")
+@click.option('-d', '--date', type=click.STRING, help="日期")
+@click.option('-c', '--config', type=click.STRING, help="config")
 def export(type, out, date, config):
     d = db(file=config)
 
     if (type == 'tse_industry'):
         csv.tse_industry(date, out, d)
-
-
-export('tse_industry', 'D:\\data', '2015-01-01', None)
 
 
 # 財報
