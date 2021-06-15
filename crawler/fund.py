@@ -34,7 +34,7 @@ def get(year=None, month=None, id=None):
     elif year is not None and month is not None:
         yms = [f"{year}{month:02}"]
     elif year is not None:
-        yms = [f"{year}{i + 1:02}" for i in range(12)]
+        yms = [f"{year}{i + 1:02}" for i in range(datetime.now().month - 1)]
     elif month is not None:
         yms = [f"{datetime.now().year}{month:02}"]
 
@@ -103,7 +103,7 @@ def _get(ym, id, soup):
         __VIEWSTATE = __VIEWSTATE.attrs['value']
 
     r = requests.post("https://www.sitca.org.tw/ROC/Industry/IN2629.aspx", {
-        "__EVENTTARGET": 'ctl00$ContentPlaceHolder1$ddlQ_YM',
+        "__EVENTTARGET": '',
         "__EVENTARGUMENT": '',
         "__LASTFOCUS": '',
         "__VIEWSTATE": __VIEWSTATE,
