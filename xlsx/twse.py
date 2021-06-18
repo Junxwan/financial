@@ -3,6 +3,9 @@ import glob
 import logging
 import pandas as pd
 import numpy as np
+from models import models
+from sqlalchemy import engine
+from sqlalchemy.orm import Session
 
 
 # 營收
@@ -348,3 +351,51 @@ def dividend(path, toPath):
 
     pd.DataFrame(csv, index=index, columns=list(years.keys())).to_csv(os.path.join(toPath, "股利.csv"),
                                                                       encoding="utf_8_sig")
+
+
+# 指數
+def exponent(path, d: engine):
+    session = Session(d)
+    stocks = {v.code: v.id for v in session.execute(models.stock.select()).all()}
+    exponent = {
+        'OTC': {},
+        'TSE': {},
+    }
+
+    list = session.execute(
+        "SELECT stocks.code, prices.date, prices.volume FROM prices join stocks on prices.stock_id = stocks.id where prices.date >= :date and stocks.code in ('OTC', 'TSE')",
+        {
+            'date': '2021-06-10',
+        }
+    ).all()
+
+    for v in list:
+        exponent[v.code][v.date.__str__()] = v.volume
+
+    for p in glob.glob(os.path.join(path, "*.csv")):
+        name = os.path.split(p)[1].split('.')[0]
+        insert = []
+
+        for i, v in pd.read_csv(p).iterrows():
+            date = str(int(v['date']))
+            date = f"{date[:4]}-{date[4:6]}-{date[6:8]}"
+
+            insert.append({
+                'stock_id': stocks[name],
+                'date': date,
+                'open': v['open'],
+                'close': v['close'],
+                'high': v['high'],
+                'low': v['low'],
+                'increase': v['increase'],
+                'amplitude': round(((v['high'] / v['low']) - 1) * 100, 2),
+                'volume': v['volume '],
+                'volume_ratio': round((v['volume '] / exponent[name[:3]][date]) * 100, 3),
+            })
+
+        result = session.execute(models.price.insert(), insert)
+        if result.is_insert == False or result.rowcount != len(insert):
+            logging.info("insert error")
+        else:
+            logging.info(f"save price {name} {len(insert)} count")
+            session.commit()

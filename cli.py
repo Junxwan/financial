@@ -563,12 +563,13 @@ def imports(type, path, dir, year, month, config):
     d = db(file=config)
 
     if type in ['profit', 'assetsDebt', 'cash', 'equity', 'revenue', 'dividend']:
-        financial.imports(type, path=path, dir=dir, d=d)
+        financial.imports(type, path=path, dir=dir)
+    elif type == 'financial':
+        financial.imports(None, path=path, dir=dir, d=d)
     elif type == 'fund':
         fund.imports(year, month, dir, d)
-
-
-# imports('fund', '', 'D:\\data\\financial\\fund', 2021, None, None)
+    elif type == 'exponent':
+        xtwse.exponent(dir, d)
 
 
 # 匯出
