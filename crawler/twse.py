@@ -586,8 +586,8 @@ def otc_industry(d: engine):
     }
 
     now = datetime.datetime.now()
-    date = f"{now.year}-{'{0:02d}'.format(now.month)}-11"
-    qDate = f"{now.year - 1911}/{'{0:02d}'.format(now.month)}/11"
+    date = f"{now.year}-{'{0:02d}'.format(now.month)}-{'{0:02d}'.format(now.day)}"
+    qDate = f"{now.year - 1911}/{'{0:02d}'.format(now.month)}/{'{0:02d}'.format(now.day)}"
     r = requests.get(
         f"https://www.tpex.org.tw/web/stock/aftertrading/all_daily_index/sectinx_print.php?l=zh-tw&d={qDate}",
         headers=HEADERS)

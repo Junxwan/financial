@@ -111,7 +111,8 @@ def cli():
     logging.basicConfig(level=logging.INFO,
                         format='%(asctime)s [%(levelname)s] %(message)s',
                         datefmt='%Y-%m-%d %H:%M:%S',
-                        filename=filename)
+                        filename=filename
+                        )
 
 
 # 月營收
@@ -570,6 +571,8 @@ def imports(type, path, dir, year, month, config):
         fund.imports(year, month, dir, d)
     elif type == 'exponent':
         xtwse.exponent(dir, d)
+    elif type == 'price':
+        xtwse.price(dir, d)
 
 
 # 匯出

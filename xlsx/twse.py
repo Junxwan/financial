@@ -399,3 +399,51 @@ def exponent(path, d: engine):
         else:
             logging.info(f"save price {name} {len(insert)} count")
             session.commit()
+
+
+# 個股股價
+def price(dir, d: engine):
+    session = Session(d)
+    stocks = {v.code: v.id for v in session.execute(models.stock.select()).all()}
+
+    for p in glob.glob(os.path.join(dir, "*.csv")):
+        insert = []
+        name = os.path.split(p)[1].split('.')[0]
+
+        if name not in stocks:
+            logging.info(f"{name} not found")
+            return False
+
+        for i, v in pd.read_csv(p).iterrows():
+            date = str(int(v['date']))
+            insert.append({
+                'stock_id': stocks[name],
+                'date': f"{date[:4]}-{date[4:6]}-{date[6:8]}",
+                'open': v['open'],
+                'close': v['close'],
+                'high': v['high'],
+                'low': v['low'],
+                'increase': v['increase'],
+                'amplitude': v['amplitude'],
+                'volume': v['volume'],
+                'volume_ratio': 0,
+                'value': v['value'] * 100000000,
+                'main': v['main'],
+                'fund': v['fund'],
+                'foreign': v['foreign'],
+                'volume_5': v['volume_5'],
+                'volume_10': v['volume_10'],
+                'volume_20': v['volume_20 '],
+            })
+
+        if len(insert) == 0:
+            logging.info(f"save price {name} {len(insert)} count")
+            continue
+
+        result = session.execute(models.price.insert(), insert)
+        if result.is_insert == False or result.rowcount != len(insert):
+            logging.info("insert error")
+            return False
+        else:
+            logging.info(f"save price {name} {len(insert)} count")
+            session.commit()
