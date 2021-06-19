@@ -379,6 +379,10 @@ def exponent(path, d: engine):
         for i, v in pd.read_csv(p).iterrows():
             date = str(int(v['date']))
             date = f"{date[:4]}-{date[4:6]}-{date[6:8]}"
+            ratio = 0
+
+            if name not in ['OTC', 'TSE']:
+                ratio = round((v['volume '] / exponent[name[:3]][date]) * 100, 3)
 
             insert.append({
                 'stock_id': stocks[name],
@@ -390,7 +394,7 @@ def exponent(path, d: engine):
                 'increase': v['increase'],
                 'amplitude': round(((v['high'] / v['low']) - 1) * 100, 2),
                 'volume': v['volume '],
-                'volume_ratio': round((v['volume '] / exponent[name[:3]][date]) * 100, 3),
+                'volume_ratio': ratio,
             })
 
         result = session.execute(models.price.insert(), insert)
