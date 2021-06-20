@@ -437,7 +437,10 @@ def price(dir, d: engine):
                 'foreign': v['foreign'],
                 'volume_5': v['volume_5'],
                 'volume_10': v['volume_10'],
-                'volume_20': v['volume_20 '],
+                'volume_20': v['volume_20'],
+                'increase_5': v['increase_5'],
+                'increase_23': v['increase_23'],
+                'increase_63': v['increase_63 '],
             })
 
         if len(insert) == 0:

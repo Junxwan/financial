@@ -159,7 +159,11 @@ price = Table('prices', metadata,
               Column('volume_5', Integer),
               Column('volume_10', Integer),
               Column('volume_20', Integer),
+              Column('increase_5', Float),
+              Column('increase_23', Float),
+              Column('increase_63', Float),
               )
+
 company = Table('companies', metadata,
                 Column('id', Integer, primary_key=True),
                 Column('name', Text),
