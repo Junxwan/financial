@@ -586,6 +586,8 @@ def export(type, out, date, config):
 
     if (type == 'tse_industry'):
         csv.tse_industry(date, out, d)
+    elif (type == 'price'):
+        csv.price(date, out, d)
 
 
 # 財報
