@@ -406,12 +406,21 @@ def exponent(path, d: engine):
 
 
 # 個股股價
-def price(dir, d: engine):
+def price(dir, d: engine, batch=False):
     session = Session(d)
     stocks = {v.code: v.id for v in session.execute(models.stock.select()).all()}
+    insert = []
+
+    def create(insert, name):
+        result = session.execute(models.price.insert(), insert)
+        if result.is_insert == False or result.rowcount != len(insert):
+            logging.info("insert error")
+            return False
+        else:
+            logging.info(f"save price {name} {len(insert)} count")
+            session.commit()
 
     for p in glob.glob(os.path.join(dir, "*.csv")):
-        insert = []
         name = os.path.split(p)[1].split('.')[0]
 
         if name not in stocks:
@@ -420,6 +429,14 @@ def price(dir, d: engine):
 
         for i, v in pd.read_csv(p).iterrows():
             date = str(int(v['date']))
+            value = v['value'] * 100000000
+            fundValue = 0
+            foreignValue = 0
+
+            if v['volume'] > 0:
+                fundValue = int(int(v['fund']) * (int(value) / (v['volume'] * 1000)) * 1000)
+                foreignValue = int(int(v['foreign']) * (int(value) / (v['volume'] * 1000)) * 1000)
+
             insert.append({
                 'stock_id': stocks[name],
                 'date': f"{date[:4]}-{date[4:6]}-{date[6:8]}",
@@ -431,7 +448,7 @@ def price(dir, d: engine):
                 'amplitude': v['amplitude'],
                 'volume': v['volume'],
                 'volume_ratio': 0,
-                'value': v['value'] * 100000000,
+                'value': value,
                 'main': v['main'],
                 'fund': v['fund'],
                 'foreign': v['foreign'],
@@ -441,16 +458,19 @@ def price(dir, d: engine):
                 'increase_5': v['increase_5'],
                 'increase_23': v['increase_23'],
                 'increase_63': v['increase_63 '],
+                'fund_value': fundValue,
+                'foreign_value': foreignValue,
             })
 
         if len(insert) == 0:
             logging.info(f"save price {name} {len(insert)} count")
             continue
 
-        result = session.execute(models.price.insert(), insert)
-        if result.is_insert == False or result.rowcount != len(insert):
-            logging.info("insert error")
-            return False
+        if batch == False:
+            create(insert, name)
+            insert = []
         else:
-            logging.info(f"save price {name} {len(insert)} count")
-            session.commit()
+            logging.info(f"wait save price {name} {len(insert)} count")
+
+    if batch and len(insert) > 0:
+        create(insert, 'all')

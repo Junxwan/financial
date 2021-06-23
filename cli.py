@@ -572,7 +572,7 @@ def imports(type, path, dir, year, month, config):
     elif type == 'exponent':
         xtwse.exponent(dir, d)
     elif type == 'price':
-        xtwse.price(dir, d)
+        xtwse.price(dir, d, batch=True)
 
 
 # 匯出

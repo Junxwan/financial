@@ -162,6 +162,8 @@ price = Table('prices', metadata,
               Column('increase_5', Float),
               Column('increase_23', Float),
               Column('increase_63', Float),
+              Column('fund_value', BigInteger),
+              Column('foreign_value', BigInteger),
               )
 
 company = Table('companies', metadata,
