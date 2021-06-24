@@ -48,7 +48,7 @@ FINANCIAL_TYPE = ['all', BALANCE_SHEET, CONSOLIDATED_INCOME_STATEMENT, CASH_FLOW
 # 財報合併種類
 MERGE_TYPE = ['all', MONTH_REVENUE, BALANCE_SHEET, CONSOLIDATED_INCOME_STATEMENT, CASH_FLOW_STATEMENT,
               CHANGES_IN_EQUITY,
-              DIVIDEND]
+              DIVIDEND, 'price']
 
 EXPONENT = ['TSE', 'OTC', 'TSE_INDUSTRY', 'OTC_INDUSTRY', 'XQ_INDUSTRY']
 
@@ -232,6 +232,8 @@ def merge(input, out, type):
 
         for t in MERGE_TYPE:
             m(t)
+    elif type == 'price':
+        csv.priceMerge(input)
     else:
         m(type)
 

@@ -1,4 +1,5 @@
 import datetime
+import glob
 import logging
 import os
 import pandas as pd
@@ -148,3 +149,63 @@ def price(year, out, d: engine):
         )
 
         logging.info(f"save price {file}")
+
+# 股價資料項目合併
+def priceMerge(dir):
+    data = {}
+    stocks = {}
+
+    for d in glob.glob(os.path.join(dir, '*')):
+        if os.path.isdir(d) == False:
+            continue
+
+        name = os.path.split(d)[1]
+        tmp = {}
+        dates = {}
+        for path in sorted(glob.glob(os.path.join(d, '*.csv')), reverse=True):
+            for i, v in pd.read_csv(path).iterrows():
+                code = v['代碼']
+
+                if code not in tmp:
+                    tmp[code] = {}
+                    stocks[code] = v['名稱']
+
+                for date, value in v[2:].items():
+                    if date not in dates:
+                        dates[date] = True
+
+                    tmp[code][date] = value
+
+        data[name] = tmp
+
+        logging.info(f"read all price {name}")
+
+
+    dates = list(dates)
+    for name, value in data.items():
+        tmp = {}
+        for code, items in value.items():
+            v = [code, stocks[code]]
+            for date in dates:
+                if date not in items:
+                    v.append(pd.NaT)
+                else:
+                    v.append(items[date])
+
+            tmp[code] = v
+
+        tmp = [v[1] for v in sorted(tmp.items(), key=lambda x: x[1], reverse=False)]
+
+        data[name] = pd.DataFrame(tmp, columns=['代碼', '名稱'] + dates)
+        data[name].to_csv(
+            os.path.join(dir, f"{name}.csv"), encoding='utf_8_sig', index=False
+        )
+
+        logging.info(f"merge {name} price")
+
+    with pd.ExcelWriter(os.path.join(dir, "price.xlsx")) as writer:
+        for k, v in data.items():
+            logging.info(f"merge {k} to price")
+            v.to_excel(writer, sheet_name=k, index=False)
+
+    logging.info(f"merge price ok")
