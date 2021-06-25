@@ -192,10 +192,11 @@ def dividend(year, outpath):
 
 # 合併
 @cli.command('merge')
+@click.option('-t', '--type', default='all', type=click.Choice(MERGE_TYPE, case_sensitive=False), help="合併類型")
 @click.option('-i', '--input', type=click.Path(), help="輸入路徑")
 @click.option('-o', '--out', type=click.Path(), help="輸出路徑")
-@click.option('-t', '--type', default='all', type=click.Choice(MERGE_TYPE, case_sensitive=False), help="合併類型")
-def merge(input, out, type):
+@click.option('-y', '--year', default=0, help="年")
+def merge(type, input, out, year):
     def m(type):
         if type == BALANCE_SHEET:
             log("合併 資產負債表...")
@@ -233,7 +234,7 @@ def merge(input, out, type):
         for t in MERGE_TYPE:
             m(t)
     elif type == 'price':
-        csv.priceMerge(input)
+        csv.priceMerge(input, year=year)
     else:
         m(type)
 

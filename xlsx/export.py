@@ -150,18 +150,30 @@ def price(year, out, d: engine):
 
         logging.info(f"save price {file}")
 
+
 # 股價資料項目合併
-def priceMerge(dir):
+def priceMerge(dir, year=None):
     data = {}
     stocks = {}
+    names = ['open', 'close', 'increase', 'volume', 'value',
+             'fund', 'fund_value', 'foreign_value', 'increase_5',
+             'increase_23', 'increase_63'
+             ]
+
+    if year is None:
+        endDate = f"1911-01-01"
+    else:
+        endDate = f"{year}-01-01"
 
     for d in glob.glob(os.path.join(dir, '*')):
-        if os.path.isdir(d) == False:
+        name = os.path.split(d)[1]
+
+        if name not in names or os.path.isdir(d) == False:
             continue
 
-        name = os.path.split(d)[1]
         tmp = {}
         dates = {}
+
         for path in sorted(glob.glob(os.path.join(d, '*.csv')), reverse=True):
             for i, v in pd.read_csv(path).iterrows():
                 code = v['代碼']
@@ -171,6 +183,9 @@ def priceMerge(dir):
                     stocks[code] = v['名稱']
 
                 for date, value in v[2:].items():
+                    if endDate > date:
+                        continue
+
                     if date not in dates:
                         dates[date] = True
 
@@ -179,7 +194,6 @@ def priceMerge(dir):
         data[name] = tmp
 
         logging.info(f"read all price {name}")
-
 
     dates = list(dates)
     for name, value in data.items():
