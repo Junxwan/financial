@@ -48,8 +48,8 @@ def tse_industry(date, out, d: engine):
 
 def price(year, out, d: engine):
     names = [
-        'open', 'close', 'increase', 'volume', 'value', 'fund_value', 'foreign_value', 'fund', 'increase_5',
-        'increase_23', 'increase_63'
+        'open', 'close', 'increase', 'volume', 'value', 'fund_value',
+        'foreign_value', 'increase_5', 'increase_23', 'increase_63'
     ]
 
     session = Session(d)
