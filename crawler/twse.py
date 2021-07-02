@@ -95,20 +95,24 @@ def balance_sheet(code, year, season):
         return {}
 
     table = table[-1]
-    columns = table.columns.tolist()[1:]
+    columns = table.columns.tolist()[1:-2]
 
-    d = columns[0][2]
+    for i in range(int(len(columns) / 2)):
+        d = columns[i * 2][2]
 
-    if len(d) != 10:
-        return {}
+        if len(d) != 10:
+            continue
 
-    if d[4:6] == '01':
-        return {}
+        if d[4:6] == '01':
+            continue
 
-    data[f"{int(d[:3]) + 1911}{st[int(d[4:6])]}"] = pd.DataFrame(
-        table.iloc[:, [0, 1, 2]].to_numpy().tolist(),
-        columns=['項目', '金額', '%']
-    )
+        if d[4:] != columns[0][2][4:]:
+            continue
+
+        data[f"{int(d[:3]) + 1911}{st[int(d[4:6])]}"] = pd.DataFrame(
+            table.iloc[:, [0, 1 + (2 * i), 2 + (2 * i)]].to_numpy().tolist(),
+            columns=['項目', '金額', '%']
+        )
 
     return data
 
@@ -206,31 +210,32 @@ def cash_flow_statement(code, year, season):
         return {}
 
     table = table[-1]
-    columns = table.columns.tolist()[1:]
+    columns = table.columns.tolist()[1:3]
 
-    s = ''
-    d = columns[0][2]
+    for i in range(len(columns)):
+        s = ''
+        d = columns[i][2]
 
-    if len(d) == 21:
-        if d[4:6] == '01' and d[15:17] == '03':
-            s = "Q1"
-        if d[4:6] == '01' and d[15:17] == '06':
-            s = "Q2"
-        if d[4:6] == '01' and d[15:17] == '09':
-            s = "Q3"
-        if d[4:6] == '01' and d[15:17] == '12':
+        if len(d) == 21:
+            if d[4:6] == '01' and d[15:17] == '03':
+                s = "Q1"
+            if d[4:6] == '01' and d[15:17] == '06':
+                s = "Q2"
+            if d[4:6] == '01' and d[15:17] == '09':
+                s = "Q3"
+            if d[4:6] == '01' and d[15:17] == '12':
+                s = "Q4"
+        elif len(d) == 7:
+            s = f"Q{d[5:6]}"
+        elif len(d) == 5:
             s = "Q4"
-    elif len(d) == 7:
-        s = f"Q{d[5:6]}"
-    elif len(d) == 5:
-        s = "Q4"
-    else:
-        return {}
+        else:
+            return {}
 
-    data[f"{int(d[:3]) + 1911}{s}"] = pd.DataFrame(
-        table.iloc[:, [0, 1]].to_numpy().tolist(),
-        columns=['項目', '金額']
-    )
+        data[f"{int(d[:3]) + 1911}{s}"] = pd.DataFrame(
+            table.iloc[:, [0, 1 + (2 * i)]].to_numpy().tolist(),
+            columns=['項目', '金額']
+        )
 
     return data
 
@@ -268,21 +273,23 @@ def changes_in_equity(code, year, season):
     if table[1].shape[1] == 1:
         return {}
 
-    c = table[1].columns.tolist()[0][0]
+    table = table[1:]
+    for i in range(len(table)):
+        c = table[i].columns.tolist()[0][0]
 
-    if c[5:] == '年度':
-        s = "Q4"
-    elif c[5:] == '年前3季':
-        s = 'Q3'
-    elif c[5:] == '年上半年度':
-        s = 'Q2'
-    elif c[5:] == '年第1季':
-        s = 'Q1'
-    else:
-        return {}
+        if c[5:] == '年度':
+            s = "Q4"
+        elif c[5:] == '年前3季':
+            s = 'Q3'
+        elif c[5:] == '年上半年度':
+            s = 'Q2'
+        elif c[5:] == '年第1季':
+            s = 'Q1'
+        else:
+            return {}
 
-    d = table[1].to_numpy().tolist()
-    data[f"{int(c[2:5]) + 1911}{s}"] = pd.DataFrame(d[1:], columns=d[0])
+        d = table[i].to_numpy().tolist()
+        data[f"{int(c[2:5]) + 1911}{s}"] = pd.DataFrame(d[1:], columns=d[0])
 
     return data
 
