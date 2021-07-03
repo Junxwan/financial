@@ -1,3 +1,4 @@
+import glob
 import os
 import logging
 import pandas as pd
@@ -9,37 +10,40 @@ from sqlalchemy.orm import Session
 
 
 # 匯入財報
-def imports(type, path=None, dir=None, d: engine = None):
-    fileName = {
-        "profit": "綜合損益表.csv",
-        "assetsDebt": "資產負債表.csv",
-        "cash": "現金流量表.csv",
-        "equity": "權益變動表.csv",
-        "revenue": "月營收.csv",
-        "dividend": "股利.csv",
-    }
+def imports(type, year, month=None, dir=None, d: engine = None):
+    types = ['balance_sheet', 'cash_flow_statement', 'changes_in_equity',
+             'consolidated_income_statement', 'dividend', 'month_revenue']
 
-    if (dir is None):
-        paths = {type: path}
+    if type is None:
+        paths = {}
     else:
-        paths = {name: os.path.join(dir, path) for name, path in fileName.items()}
+        paths = {type: glob.glob(os.path.join(dir, type, f"{year}*", '*'))}
 
-    for type, path in paths.items():
-        logging.info(f"read {type} {path}")
-        data = pd.read_csv(path)
+    for type, paths in paths.items():
+        for path in paths:
+            if type == 'month_revenue':
+                ym = os.path.split(path)[1].split('.')[0].split('-')
 
-        if type == 'profit':
-            profit(data, d)
-        elif type == 'assetsDebt':
-            assetsDebt(data, d)
-        elif type == 'cash':
-            cash(data, d)
-        elif type == 'equity':
-            equity(data, d)
-        elif type == 'revenue':
-            month_revenue(data, d)
-        elif type == 'dividend':
-            dividend(data, d)
+                if month is not None and int(ym[1]) != month:
+                    continue
+
+                month_revenue(pd.read_csv(path), int(ym[0]), int(ym[1]), d)
+
+        # logging.info(f"read {type} {path}")
+        # data = pd.read_csv(path)
+        #
+        # if type == 'profit':
+        #     profit(data, d)
+        # elif type == 'assetsDebt':
+        #     assetsDebt(data, d)
+        # elif type == 'cash':
+        #     cash(data, d)
+        # elif type == 'equity':
+        #     equity(data, d)
+        # elif type == 'revenue':
+        #     month_revenue(data, d)
+        # elif type == 'dividend':
+        #     dividend(data, d)
 
 
 # 綜合損益表
@@ -156,49 +160,39 @@ def equity(dataFrame: DataFrame, d: engine):
 
 
 # 月營收
-def month_revenue(dataFrame: DataFrame, d: engine):
-    code = []
-    codes = {v.code: v.id for v in Session(d).query(models.stock).all()}
-    for k, v in dataFrame.items():
-        if k == 'code':
-            code = v
-            continue
-        year = k[:4]
-        month = int(k[4:])
+def month_revenue(dataFrame: DataFrame, year, month, d: engine):
+    session = Session(d)
+    codes = {v.code: v.id for v in session.query(models.stock).all()}
 
-        q = Session(d)
-        exists = q.execute(
-            'SELECT `stocks`.`code` FROM ' + 'revenues' + ' JOIN stocks ON stock_id = `stocks`.`id` WHERE year = :year AND month = :month',
-            {
-                'year': year,
-                'month': month,
-            }
-        ).all()
+    exists = session.execute(
+        'SELECT `stocks`.`code` FROM ' + 'revenues' + ' JOIN stocks ON stock_id = `stocks`.`id` WHERE year = :year AND month = :month',
+        {
+            'year': year,
+            'month': month,
+        }
+    ).all()
 
-        exists = [v.code for v in exists]
+    exists = [v.code for v in exists]
 
-        q.close()
-
-        insert = []
-        for i, r in enumerate(v):
-            if str(code[i]) in exists or r == 0:
-                continue
-
-            insert.append({
-                'stock_id': codes[str(code[i])],
-                'year': year,
-                'month': month,
-                'value': r,
-            })
-
-        if len(insert) < 1:
+    insert = []
+    for i, v in dataFrame.iterrows():
+        code = str(v['code'])
+        if code in exists:
             continue
 
+        insert.append({
+            'stock_id': codes[code],
+            'year': year,
+            'month': month,
+            'value': v['value'],
+        })
+
+    if len(insert) > 0:
         result = d.execute(models.revenue.insert(), insert)
         if result.is_insert == False or result.rowcount != len(insert):
             logging.info("insert error")
         else:
-            logging.info(f"save {year} month {month} {len(insert)} count")
+            logging.info(f"save revenue year:{year} month:{month} count:{len(insert)}")
 
 
 # 股利

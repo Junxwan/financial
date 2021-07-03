@@ -566,10 +566,11 @@ def new_email_import(input):
 def imports(type, path, dir, year, month, config):
     d = db(file=config)
 
-    if type in ['profit', 'assetsDebt', 'cash', 'equity', 'revenue', 'dividend']:
-        financial.imports(type, path=path, dir=dir)
+    if type in [BALANCE_SHEET, CONSOLIDATED_INCOME_STATEMENT, CASH_FLOW_STATEMENT, CHANGES_IN_EQUITY,
+                DIVIDEND, MONTH_REVENUE]:
+        financial.imports(type, year, month=month, dir=dir, d=d)
     elif type == 'financial':
-        financial.imports(None, path=path, dir=dir, d=d)
+        financial.imports(None, year, month=month, dir=dir, d=d)
     elif type == 'fund':
         fund.imports(year, month, dir, d)
     elif type == 'exponent':
