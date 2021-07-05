@@ -359,6 +359,7 @@ def news(email, hours, login_email, login_pwd, save=False):
         ['聯合報-產經', cnews.udn('6644', date)],
         ['聯合報-股市', cnews.udn('6645', date)],
         ['中時', cnews.chinatimes(date)],
+        ['中時-財經要聞', cnews.chinatimes_newspapers(date)],
         ['科技新報', cnews.technews(date)],
         ['經濟日報-產業熱點', cnews.money_udn('5591', '5612', date)],
         ['經濟日報-生技醫藥', cnews.money_udn('5591', '10161', date)],

@@ -213,6 +213,46 @@ def chinatimes(end_date):
     return news
 
 
+# 中時-財經要聞 https://www.chinatimes.com/newspapers/260202?page=1&chdtv
+def chinatimes_newspapers(end_date):
+    news = []
+    isRun = True
+    page = 1
+
+    while isRun:
+        if page >= LIMIT:
+            break
+
+        r = requests.get(
+            f"https://www.chinatimes.com/newspapers/260202?page={page}&chdtv",
+            headers=HEADERS
+        )
+
+        if r.status_code != 200:
+            break
+
+        soup = BeautifulSoup(r.text, 'html.parser')
+
+        for v in soup.select('h3', class_='articlebox-compact'):
+            date = f"{v.parent.contents[3].contents[1].attrs['datetime']}:00"
+
+            if date <= end_date:
+                isRun = False
+                break
+
+            news.append({
+                'title': v.text,
+                'url': f"https://www.chinatimes.com{v.parent.contents[1].contents[0].attrs['href']}?chdtv",
+                'date': date,
+            })
+
+        page = page + 1
+
+        time.sleep(1)
+
+    return news
+
+
 # 中時文章內容
 def chinatimes_context(url):
     r = requests.get(url, headers=HEADERS)

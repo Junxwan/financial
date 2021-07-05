@@ -40,6 +40,7 @@ def main(event, context):
         ['聯合報-股市', news.udn('6645', date)],
         ['蘋果-財經地產', news.appledaily(date)],
         ['中時', news.chinatimes(date)],
+        ['中時-財經要聞', news.chinatimes_newspapers(date)],
         ['科技新報', news.technews(date)],
         ['經濟日報-產業熱點', news.money_udn('5591', '5612', date)],
         ['經濟日報-生技醫藥', news.money_udn('5591', '10161', date)],
