@@ -38,7 +38,6 @@ def main(event, context):
     data = [
         ['聯合報-產經', news.udn('6644', date)],
         ['聯合報-股市', news.udn('6645', date)],
-        ['蘋果-財經地產', news.appledaily(date)],
         ['中時', news.chinatimes(date)],
         ['中時-財經要聞', news.chinatimes_newspapers(date)],
         ['科技新報', news.technews(date)],
@@ -62,7 +61,18 @@ def main(event, context):
         ['工商時報-科技', news.ctee(date, 'tech')],
         ['工商時報-國際', news.ctee(date, 'global')],
         ['工商時報-兩岸', news.ctee(date, 'china')],
-        ['證交所-即時重大訊息', twse.news(date)],
+        ['鉅亨網-台股', news.cnyes(date, 'tw_stock')],
+        ['鉅亨網-國際股', news.cnyes(date, 'wd_stock')],
+        ['自由時報-國際財經', news.ltn(date, 'international')],
+        ['自由時報-證券產業', news.ltn(date, 'securities')],
+        ['moneydj-頭條新聞', news.moneydj(date, 'mb010000')],
+        ['moneydj-總體經濟', news.moneydj(date, 'mb020000')],
+        ['moneydj-債券市場', news.moneydj(date, 'mb040200')],
+        ['moneydj-產業情報', news.moneydj(date, 'mb07')],
+        ['東森新聞-財經新聞台股', news.ebc(date, 'stock')],
+        ['trendforce', news.trendforce(date)],
+        ['dramx', news.dramx(date)],
+        ['digitimes-報導總欄', news.digitimes(date)],
     ]
 
     logger.info('get news ok')
