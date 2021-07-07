@@ -120,7 +120,9 @@ def cli():
 @click.option('-y', '--year', default=0, help="年")
 @click.option('-m', '--month', default=0, help="月")
 @click.option('-o', '--outPath', type=click.Path(), help="輸出路徑")
-def month_revenue(year, month, outpath):
+@click.option('-s', '--save', default=False, type=click.BOOL, help="是否保存在database")
+@click.option('-c', '--config', type=click.STRING, help="config")
+def month_revenue(year, month, outpath, save, config):
     if month == 0:
         month = datetime.now().month
 
@@ -137,23 +139,28 @@ def month_revenue(year, month, outpath):
 
     m = "%02d" % month
 
-    dir = os.path.join(outpath, 'month_revenue', str(year))
-
-    if os.path.exists(dir) == False:
-        os.mkdir(dir)
-
     log(f'read month_revenue {year}-{m}')
 
     data = twse.month_revenue(year, month)
 
-    if data is not None:
+    if data is None:
+        error('not month_revenue')
+        return
+
+    if save:
+        for year, value in data.items():
+            financial.month_revenue(value, year, month, db(file=config))
+            log(f"save month_revenue {year}-{m}")
+    else:
+        dir = os.path.join(outpath, 'month_revenue', str(year))
+        if os.path.exists(dir) == False:
+            os.mkdir(dir)
+
         for year, value in data.items():
             dir = os.path.join(outpath, 'month_revenue', str(year))
             value.to_csv(os.path.join(dir, f"{year}-{m}.csv"), index=False, encoding='utf_8_sig')
 
             log(f"save month_revenue {year}-{m}")
-    else:
-        error('not month_revenue')
 
 
 # 財報
