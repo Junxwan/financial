@@ -366,7 +366,7 @@ def exponent(tag, config):
                 })
 
         if len(dates) <= 1:
-            return
+            continue
 
         insert = []
         for date, value in dates.items():
