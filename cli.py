@@ -289,6 +289,149 @@ def price(type, path, config):
         twse.xq_industry(path, d)
 
 
+# 產業指數
+@cli.command('exponent')
+@click.option('-t', '--tag', default=None, type=click.STRING, help="tag")
+@click.option('-c', '--config', type=click.STRING, help="config")
+def exponent(tag, config):
+    session = Session(db(file=config))
+    tags = []
+
+    if tag is None:
+        for v in session.execute(
+                "SELECT stock_id, tag_id, tags.name FROM tag_exponents JOIN tags ON tags.id = tag_exponents.tag_id"
+        ).all():
+            tags.append(v)
+    else:
+        row = session.execute(
+            "SELECT stock_id, tag_id, tags.name FROM tag_exponents JOIN tags ON tags.id = tag_exponents.tag_id WHERE tags.name = :tag",
+            {'tag': tag}).first()
+
+        if row is None:
+            return
+
+        tags.append(row)
+
+    for stock in tags:
+        exponent = session.execute(
+            "SELECT * FROM prices where stock_id = :id ORDER BY date DESC LIMIT 1",
+            {'id': stock.stock_id}
+        ).first()
+
+        rows = session.execute("SELECT stock_id FROM stock_tags WHERE tag_id = :tag", {
+            'tag': stock.tag_id,
+        }).all()
+
+        if exponent is None:
+            date = '2013-01-01'
+        else:
+            date = exponent.date.__str__()
+
+        prices = session.execute(
+            "SELECT stock_id, open, close, high, low, increase, value, date FROM prices "
+            "WHERE stock_id IN :stock AND date >= :date "
+            "ORDER BY 'date'",
+            {'stock': [a.stock_id for a in rows], 'date': date}).all()
+
+        data = {}
+        for v in prices:
+            if v.stock_id not in data:
+                data[v.stock_id] = []
+            data[v.stock_id].append(v)
+
+        dates = {}
+        for id, values in data.items():
+            for i, v in enumerate(values):
+                date = v.date.__str__()
+                if date not in dates:
+                    dates[date] = []
+
+                if i == 0:
+                    dates[date].append({
+                        'open': 0,
+                        'close': 0,
+                        'high': 0,
+                        'low': 0,
+                        'value': v.value,
+                    })
+                    continue
+
+                yClose = values[i - 1].close
+                dates[date].append({
+                    'open': round(((v.open / yClose) - 1) * 100, 2),
+                    'close': v.increase,
+                    'high': round(((v.high / v.open) - 1) * 100, 2),
+                    'low': round(((v.low / v.open) - 1) * 100, 2),
+                    'value': v.value,
+                })
+
+        if len(dates) <= 1:
+            return
+
+        insert = []
+        for date, value in dates.items():
+            open = 0
+            close = 0
+            high = 0
+            low = 0
+            volume = 0
+
+            for v in value:
+                open += v['open']
+                close += v['close']
+                high += v['high']
+                low += v['low']
+                volume += v['value']
+
+            l = len(value)
+
+            insert.append({
+                'stock_id': stock.stock_id,
+                'date': date,
+                'open': round(open / l, 2),
+                'close': round(close / l, 2),
+                'high': round(high / l, 2),
+                'low': round(low / l, 2),
+                'volume': volume,
+            })
+
+        for i in range(len(insert)):
+            if i == 0:
+                if exponent is None:
+                    insert[i]['open'] = 100
+                    insert[i]['close'] = 100
+                    insert[i]['high'] = 0
+                    insert[i]['low'] = 0
+                    insert[i]['increase'] = 0
+                elif exponent.date.__str__() == insert[i]['date']:
+                    insert[i]['open'] = exponent.open
+                    insert[i]['close'] = exponent.close
+                    insert[i]['high'] = exponent.high
+                    insert[i]['low'] = exponent.low
+                    insert[i]['increase'] = exponent.increase
+                else:
+                    return
+            else:
+                y = insert[i - 1]
+                insert[i]['open'] = round(y['close'] * (1 + insert[i]['open'] / 100), 2)
+                insert[i]['close'] = round(y['close'] * (1 + insert[i]['close'] / 100), 2)
+                insert[i]['high'] = round(insert[i]['open'] * (1 + insert[i]['high'] / 100), 2)
+                insert[i]['low'] = round(insert[i]['open'] * (1 + insert[i]['low'] / 100), 2)
+                insert[i]['increase'] = round(((insert[i]['close'] / y['close']) - 1) * 100, 2)
+
+        if len(insert) > 0:
+            if exponent is not None:
+                del insert[0]
+
+            result = session.execute(models.price.insert(), insert)
+            if result.is_insert == False or result.rowcount != len(insert):
+                logging.info("insert exponent tag error")
+            else:
+                logging.info(
+                    f"save exponent tag:{stock.tag_id} name:{stock.name} stock:{stock.stock_id} count:{len(insert)}")
+                session.commit()
+
+
 # 面板報價
 @cli.command('wits_view')
 @click.option('-o', '--out', type=click.Path(), help="輸出路徑")

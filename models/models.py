@@ -186,3 +186,10 @@ fundStock = Table('fund_stocks', metadata,
                   Column('amount', BigInteger),
                   Column('ratio', Float),
                   )
+
+tagExponent = Table('tag_exponents', metadata,
+                    Column('id', Integer, primary_key=True),
+                    Column('stock_id', Integer),
+                    Column('tag_id', Integer),
+                    )
+
