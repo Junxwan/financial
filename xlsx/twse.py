@@ -470,7 +470,7 @@ def price(dir, d: engine, batch=False):
             create(insert, name)
             insert = []
         else:
-            logging.info(f"wait save price {name} {len(insert)} count")
+            logging.info(f"wait save price code:{name} accumulation count:{len(insert)}")
 
     if batch and len(insert) > 0:
         create(insert, 'all')
