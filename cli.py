@@ -289,11 +289,11 @@ def price(type, path, config):
         twse.xq_industry(path, d)
 
 
-# 產業指數
-@cli.command('exponent')
+# tag產業指數
+@cli.command('tag_exponent')
 @click.option('-t', '--tag', default=None, type=click.STRING, help="tag")
 @click.option('-c', '--config', type=click.STRING, help="config")
-def exponent(tag, config):
+def tag_exponent(tag, config):
     session = Session(db(file=config))
     tags = []
 
@@ -713,15 +713,17 @@ def new_email_import(input):
 @click.option('-d', '--dir', type=click.Path(), help="輸入檔案目錄")
 @click.option('-y', '--year', type=click.INT, help="年")
 @click.option('-m', '--month', type=click.INT, help="月")
+@click.option('-q', '--quarterly', type=click.INT, help="季")
 @click.option('-c', '--config', type=click.STRING, help="config")
-def imports(type, path, dir, year, month, config):
+def imports(type, path, dir, year, month, quarterly, config):
     d = db(file=config)
 
+    if year is None:
+        year = datetime.now().year
+
     if type in [BALANCE_SHEET, CONSOLIDATED_INCOME_STATEMENT, CASH_FLOW_STATEMENT, CHANGES_IN_EQUITY,
-                DIVIDEND, MONTH_REVENUE]:
-        financial.imports(type, year, month=month, dir=dir, d=d)
-    elif type == 'financial':
-        financial.imports(None, year, month=month, dir=dir, d=d)
+                DIVIDEND, MONTH_REVENUE, 'financial']:
+        financial.imports(type, year, quarterly=quarterly, month=month, dir=dir, d=d)
     elif type == 'fund':
         fund.imports(year, month, dir, d)
     elif type == 'exponent':

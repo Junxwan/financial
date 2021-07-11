@@ -10,45 +10,133 @@ from sqlalchemy.orm import Session
 
 
 # 匯入財報
-def imports(type, year, month=None, dir=None, d: engine = None):
-    types = ['balance_sheet', 'cash_flow_statement', 'changes_in_equity',
-             'consolidated_income_statement', 'dividend', 'month_revenue']
+def imports(type, year, month=None, quarterly=None, dir=None, d: engine = None):
+    paths = {}
+    types = []
 
-    if type is None:
-        paths = {}
-    else:
-        paths = {type: glob.glob(os.path.join(dir, type, f"{year}*", '*'))}
+    if type is not None:
+        if type == 'financial':
+            types = ['balance_sheet', 'cash_flow_statement', 'changes_in_equity',
+                     'consolidated_income_statement', 'dividend']
+        else:
+            types = [type]
+
+    for t in types:
+        if t == 'month_revenue':
+            if month is None:
+                paths[t] = glob.glob(os.path.join(dir, t, f"{year}*", '*'))
+            else:
+                m = "%02d" % month
+                paths[t] = [os.path.join(dir, t, f"{year}", f"{year}-{m}.csv")]
+        else:
+            if quarterly is not None:
+                paths[t] = glob.glob(os.path.join(dir, t, f"{year}Q{quarterly}", '*'))
+            else:
+                ps = glob.glob(os.path.join(dir, t, f"{year}*"))
+                if len(ps) == 0:
+                    continue
+
+                q = os.path.split(ps[-1])[1]
+                paths[t] = glob.glob(os.path.join(dir, t, f"{q}", '*'))
 
     for type, paths in paths.items():
-        for path in paths:
-            if type == 'month_revenue':
+        if type == 'month_revenue':
+            for path in paths:
                 ym = os.path.split(path)[1].split('.')[0].split('-')
 
                 if month is not None and int(ym[1]) != month:
                     continue
 
                 month_revenue(pd.read_csv(path), int(ym[0]), int(ym[1]), d)
+        if type == 'dividend':
+            pass
+        else:
+            data = {}
+            for path in paths:
+                data[os.path.split(path)[1].split('.')[0]] = pd.read_csv(path)
 
-        # logging.info(f"read {type} {path}")
-        # data = pd.read_csv(path)
-        #
-        # if type == 'profit':
-        #     profit(data, d)
-        # elif type == 'assetsDebt':
-        #     assetsDebt(data, d)
-        # elif type == 'cash':
-        #     cash(data, d)
-        # elif type == 'equity':
-        #     equity(data, d)
-        # elif type == 'revenue':
-        #     month_revenue(data, d)
-        # elif type == 'dividend':
-        #     dividend(data, d)
+            yq = os.path.split(os.path.split(paths[0])[0])[1]
+            year = int(yq[:4])
+            quarterly = int(yq[-1])
+
+            if len(data) > 0:
+                def deleteFinancial(type, dir, year, quarterly, codes, model):
+                    if len(codes) == 0:
+                        return
+
+                    updateCodes = []
+                    insert = {}
+                    for path in glob.glob(os.path.join(dir, type, f"{year}Q{quarterly}", '*')):
+                        code = os.path.split(path)[1].split('.')[0]
+                        if code in codes:
+                            updateCodes.append(code)
+                            insert[code] = pd.read_csv(path)
+
+                    if len(insert) == 0:
+                        return
+
+                    session = Session(d)
+                    ids = [v.id for v in
+                           session.execute("SELECT id FROM stocks WHERE code IN :codes", {'codes': updateCodes}).all()
+                           ]
+
+                    result = session.execute(
+                        f"DELETE FROM {model.name} WHERE stock_id IN ({','.join(str(e) for e in ids)}) AND year = {year} AND quarterly = {quarterly}"
+                    )
+
+                    if result.rowcount != len(insert):
+                        logging.info(f"delete {model.name} error")
+                        return
+
+                    session.commit()
+                    logging.info(f"delete {model.name} year:{year}: quarterly:{quarterly} count:{result.rowcount}")
+
+                    if type == 'consolidated_income_statement':
+                        consolidated_income_statement(data, year, quarterly, d)
+                    elif type == 'balance_sheet':
+                        balance_sheet(data, year, quarterly, d)
+                    elif type == 'cash_flow_statement':
+                        cash_flow_statement(data, year, quarterly, d)
+                    elif type == 'changes_in_equity':
+                        changes_in_equity(data, year, quarterly, d)
+
+                if type == 'consolidated_income_statement':
+                    deleteFinancial(
+                        'consolidated_income_statement',
+                        dir,
+                        year - 1, quarterly,
+                        consolidated_income_statement(data, year, quarterly, d),
+                        models.profit
+                    )
+                elif type == 'balance_sheet':
+                    deleteFinancial(
+                        'balance_sheet',
+                        dir,
+                        year - 1, quarterly,
+                        balance_sheet(data, year, quarterly, d),
+                        models.assetsDebt
+                    )
+                elif type == 'cash_flow_statement':
+                    deleteFinancial(
+                        'cash_flow_statement',
+                        dir,
+                        year - 1, quarterly,
+                        cash_flow_statement(data, year, quarterly, d),
+                        models.cash
+                    )
+                elif type == 'changes_in_equity':
+                    deleteFinancial(
+                        'changes_in_equity',
+                        dir,
+                        year - 1, quarterly,
+                        changes_in_equity(data, year, quarterly, d),
+                        models.equity
+                    )
 
 
 # 綜合損益表
-def profit(dataFrame: DataFrame, d: engine):
-    _import({
+def consolidated_income_statement(dataFrames: dict, year, quarterly, d: engine):
+    return _import({
         '營業收入合計': 'revenue',
         '營業成本合計': 'cost',
         '營業毛利（毛損）': 'gross',
@@ -68,12 +156,12 @@ def profit(dataFrame: DataFrame, d: engine):
         '母公司業主（綜合損益）': 'profit_main_total',
         '非控制權益（綜合損益）': 'profit_non_total',
         '基本每股盈餘': 'eps',
-    }, dataFrame, d, models.profit)
+    }, dataFrames, year, quarterly, d, models.profit)
 
 
 # 資產負責表
-def assetsDebt(dataFrame: DataFrame, d: engine):
-    _import({
+def balance_sheet(dataFrames: dict, year, quarterly, d: engine):
+    return _import({
         '現金及約當現金': 'cash',
         '存貨': 'stock',
         '應收票據淨額': 'bill_receivable',
@@ -103,12 +191,12 @@ def assetsDebt(dataFrame: DataFrame, d: engine):
         '非控制權益': 'non_equity_total',
         '權益總額': 'equity_total',
         '負債及權益總計': 'debt_equity_total',
-    }, dataFrame, d, models.assetsDebt)
+    }, dataFrames, year, quarterly, d, models.assetsDebt)
 
 
 # 現金流量表
-def cash(dataFrame: DataFrame, d: engine):
-    _import({
+def cash_flow_statement(dataFrames: dict, year, quarterly, d: engine):
+    return _import({
         '本期稅前淨利（淨損）': 'profit_pre',
         '折舊費用': 'depreciation',
         '營業活動之淨現金流入（流出）': 'business_activity',
@@ -118,12 +206,12 @@ def cash(dataFrame: DataFrame, d: engine):
         '本期現金及約當現金增加（減少）數': 'cash_add',
         '期初現金及約當現金餘額': 'start_cash_balance',
         '期末現金及約當現金餘額': 'end_cash_balance',
-    }, dataFrame, d, models.cash)
+    }, dataFrames, year, quarterly, d, models.cash)
 
 
 # 權益變動表
-def equity(dataFrame: DataFrame, d: engine):
-    _import({
+def changes_in_equity(dataFrames: dict, year, quarterly, d: engine):
+    codes = _import({
         '股本合計-期初餘額': 'start_stock',
         '股本合計-期末餘額': 'end_stock',
         '資本公積-期初餘額': 'start_capital_reserve',
@@ -134,10 +222,10 @@ def equity(dataFrame: DataFrame, d: engine):
         '未分配盈餘（或待彌補虧損）-期末餘額': 'end_undistributed_surplus',
         '權益總額-期初餘額': 'start_equity',
         '權益總額-期末餘額': 'end_equity',
-    }, dataFrame, d, models.equity)
+    }, dataFrames, year, quarterly, d, models.equity)
 
     q = Session(d)
-    yq = dataFrame.columns[2]
+    yq = dataFrames.columns[2]
 
     stock = q.execute(
         'SELECT `stocks`.`code`, `equities`.`end_stock` FROM equities JOIN stocks ON stock_id = `stocks`.`id` WHERE year = :year AND quarterly = :quarterly',
@@ -157,6 +245,8 @@ def equity(dataFrame: DataFrame, d: engine):
 
     q.commit()
     q.close()
+
+    return codes
 
 
 # 月營收
@@ -253,58 +343,52 @@ def dividend(dataFrame: DataFrame, d: engine):
 
 
 # 匯入財報
-def _import(header, dataFrame: DataFrame, d: engine, model: schema):
+def _import(header, dataFrames: dict, year, quarterly, d: engine, model: schema):
     data = {}
-    q = Session(d)
+    session = Session(d)
 
-    for f in dataFrame.groupby('code'):
-        code = f[0]
-        h = []
-
-        for v in f[1].items():
-            if v[0] == 'code':
+    for code, value in dataFrames.items():
+        data[code] = {}
+        for v in list(value.values):
+            if v[0] not in header:
                 continue
 
-            if v[0] == 'name':
-                h = [header[v] for v in list(v[1])]
-                continue
+            data[code][header[v[0]]] = v[1]
 
-            if v[0] not in data:
-                data[v[0]] = {}
+        for k, v in header.items():
+            if v not in data[code]:
+                data[code][v] = 0
 
-            data[v[0]][code] = {h[i]: a for i, a in enumerate(v[1])}
+    codes = {v.code: v.id for v in session.query(models.stock).all()}
+    exists = session.execute(
+        'SELECT `stocks`.`code` FROM ' + model.name + ' JOIN stocks ON stock_id = `stocks`.`id` WHERE year = :year AND quarterly = :quarterly',
+        {
+            'year': year,
+            'quarterly': quarterly,
+        }
+    ).all()
 
-    codes = {v.code: v.id for v in q.query(models.stock).all()}
+    insert = []
+    insertCodes = []
+    exists = [v.code for v in exists]
 
-    for ys, items in data.items():
-        insert = []
-        year = ys[:4]
-        quarterly = ys[-1]
-
-        exists = q.execute(
-            'SELECT `stocks`.`code` FROM ' + model.name + ' JOIN stocks ON stock_id = `stocks`.`id` WHERE year = :year AND quarterly = :quarterly',
-            {
-                'year': year,
-                'quarterly': quarterly,
-            }
-        ).all()
-
-        exists = [v.code for v in exists]
-
-        for code, value in items.items():
-            if str(code) in exists:
-                continue
-
-            value['stock_id'] = codes[str(code)]
-            value['year'] = year
-            value['quarterly'] = quarterly
-            insert.append(value)
-
-        if len(insert) < 1:
+    for code, value in data.items():
+        if code in exists:
             continue
 
-        result = d.execute(model.insert(), insert)
+        value['stock_id'] = codes[code]
+        value['year'] = year
+        value['quarterly'] = quarterly
+        insert.append(value)
+
+        insertCodes.append(code)
+
+    if len(insert) > 0:
+        result = session.execute(model.insert(), insert)
         if result.is_insert == False or result.rowcount != len(insert):
-            logging.info("insert error")
+            logging.info(f"insert {model.name} error")
         else:
-            logging.info(f"save {year} Q{quarterly} {len(insert)} count")
+            logging.info(f"save {model.name} year:{year} quarterly:{quarterly} count:{len(insert)}")
+            session.commit()
+
+    return insertCodes
