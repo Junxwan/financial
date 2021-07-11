@@ -279,8 +279,10 @@ def merge_financial(input):
 def price(type, path, config):
     d = db(file=config)
 
-    if (type in ['TSE', 'OTC']):
-        twse.exponent(type, d)
+    if type in 'TSE':
+        twse.twse(d)
+    elif type in 'OTC':
+        twse.otc(d)
     elif (type == 'TSE_INDUSTRY'):
         twse.tse_industry(d)
     elif (type == 'OTC_INDUSTRY'):

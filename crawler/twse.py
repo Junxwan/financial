@@ -397,6 +397,140 @@ def news(end_date):
     return news
 
 
+# 加權指數
+def twse(d: engine):
+    session = Session(d)
+
+    r = requests.get(
+        f"https://www.twse.com.tw/indicesReport/MI_5MINS_HIST?response=json&date=&_={time.time() * 1000}",
+        headers={
+            'User-Agent': USER_AGENT,
+            'host': 'www.twse.com.tw',
+        })
+
+    data = r.json()['data'][-1]
+    stock = session.execute('SELECT id FROM stocks WHERE code = :code', {'code': 'TSE'}).first()
+    dates = data[0].split('/')
+
+    date = f"{int(dates[0]) + 1911}-{dates[1]}-{dates[2]}"
+    open = float(data[1].replace(',', ''))
+    high = float(data[2].replace(',', ''))
+    low = float(data[3].replace(',', ''))
+    close = float(data[4].replace(',', ''))
+
+    r = requests.get(
+        f"https://www.twse.com.tw/exchangeReport/FMTQIK?response=json&date=&_={time.time() * 1000}",
+        headers={
+            'User-Agent': USER_AGENT,
+            'host': 'www.twse.com.tw',
+        })
+
+    volume = r.json()['data'][-1]
+
+    price = session.execute(
+        'SELECT * FROM prices WHERE date <= :date AND stock_id = :stock_id ORDER BY date DESC LIMIT 2',
+        {'date': date, 'stock_id': stock.id}
+    ).all()
+
+    if volume[0] != data[0]:
+        return
+
+    if price[0].date.__str__() == date:
+        return
+
+    insert = [
+        {
+            'stock_id': stock.id,
+            'date': date,
+            'open': open,
+            'high': high,
+            'low': low,
+            'close': close,
+            'increase': round((round(close - price[0].close, 2) / close) * 100, 2),
+            'amplitude': round(((high / low) - 1) * 100, 2),
+            'volume': int(volume[2].replace(',', '')),
+            'volume_ratio': 0
+        }
+    ]
+
+    if (len(insert) > 0):
+        result = session.execute(models.price.insert(), insert)
+
+        if result.is_insert == False or result.rowcount != len(insert):
+            logging.error('insert error')
+            return
+        session.commit()
+
+
+# otc指數
+def otc(d: engine):
+    session = Session(d)
+
+    r = requests.get(
+        f"https://www.tpex.org.tw/web/stock/aftertrading/all_daily_index/sectinx_result.php?l=zh-tw&_={time.time() * 1000}",
+        headers={
+            'User-Agent': USER_AGENT,
+            'host': 'www.tpex.org.tw',
+        })
+
+    data = r.json()
+    stock = session.execute('SELECT id FROM stocks WHERE code = :code', {'code': 'OTC'}).first()
+    dates = data['reportDate'].split('/')
+    price = data['aaData'][-1]
+
+    if price[0] != '櫃買指數':
+        return
+
+    date = f"{int(dates[0]) + 1911}-{dates[1]}-{dates[2]}"
+    open = float(price[3].replace(',', ''))
+    high = float(price[4].replace(',', ''))
+    low = float(price[5].replace(',', ''))
+    close = float(price[1].replace(',', ''))
+
+    r = requests.get(
+        f"https://www.tpex.org.tw/web/stock/aftertrading/daily_trading_index/st41_result.php?l=zh-tw&_={time.time() * 1000}",
+        headers={
+            'User-Agent': USER_AGENT,
+            'host': 'www.tpex.org.tw',
+        })
+
+    volume = r.json()['aaData'][-1]
+
+    price = session.execute(
+        'SELECT * FROM prices WHERE date <= :date AND stock_id = :stock_id ORDER BY date DESC LIMIT 2',
+        {'date': date, 'stock_id': stock.id}
+    ).all()
+
+    if volume[0] != data['reportDate']:
+        return
+
+    if price[0].date.__str__() == date:
+        return
+
+    insert = [
+        {
+            'stock_id': stock.id,
+            'date': date,
+            'open': open,
+            'high': high,
+            'low': low,
+            'close': close,
+            'increase': round((round(close - price[0].close, 2) / close) * 100, 2),
+            'amplitude': round(((high / low) - 1) * 100, 2),
+            'volume': int(volume[2].replace(',', '')),
+            'volume_ratio': 0
+        }
+    ]
+
+    if (len(insert) > 0):
+        result = session.execute(models.price.insert(), insert)
+
+        if result.is_insert == False or result.rowcount != len(insert):
+            logging.error('insert error')
+            return
+        session.commit()
+
+
 # 指數
 def exponent(type, d: engine):
     ex_ch = ''
@@ -423,8 +557,8 @@ def exponent(type, d: engine):
         {'id': stock.id, 'date': date}
     ).first()
 
-    if (price is not None):
-        return True
+    # if (price is not None):
+    #     return True
 
     r = requests.get(
         f"https://mis.twse.com.tw/stock/api/getStatis.jsp?ex={type.lower()}&delay=0&_={int(time.time()) * 1000}",
