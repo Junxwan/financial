@@ -294,8 +294,9 @@ def price(type, path, config):
 # tag產業指數
 @cli.command('tag_exponent')
 @click.option('-t', '--tag', default=None, type=click.STRING, help="tag")
+@click.option('-r', '--restart', default=False, type=click.BOOL, help="重置")
 @click.option('-c', '--config', type=click.STRING, help="config")
-def tag_exponent(tag, config):
+def tag_exponent(tag, restart, config):
     session = Session(db(file=config))
     tags = []
 
@@ -370,7 +371,7 @@ def tag_exponent(tag, config):
         if len(dates) <= 1:
             continue
 
-        insert = []
+        tmpInsert = {}
         for date, value in dates.items():
             open = 0
             close = 0
@@ -387,7 +388,7 @@ def tag_exponent(tag, config):
 
             l = len(value)
 
-            insert.append({
+            tmpInsert[date] = {
                 'stock_id': stock.stock_id,
                 'date': date,
                 'open': round(open / l, 2),
@@ -395,8 +396,9 @@ def tag_exponent(tag, config):
                 'high': round(high / l, 2),
                 'low': round(low / l, 2),
                 'volume': volume,
-            })
+            }
 
+        insert = [tmpInsert[key] for key in sorted(tmpInsert.keys())]
         for i in range(len(insert)):
             if i == 0:
                 if exponent is None:
