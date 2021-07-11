@@ -316,6 +316,9 @@ def tag_exponent(tag, restart, config):
         tags.append(row)
 
     for stock in tags:
+        if restart:
+            session.execute("DELETE FROM prices WHERE stock_id = :id", {'id': stock.stock_id})
+
         exponent = session.execute(
             "SELECT * FROM prices where stock_id = :id ORDER BY date DESC LIMIT 1",
             {'id': stock.stock_id}
@@ -325,6 +328,9 @@ def tag_exponent(tag, restart, config):
             'tag': stock.tag_id,
         }).all()
 
+        if len(rows) == 0:
+            continue
+
         if exponent is None:
             date = '2013-01-01'
         else:
@@ -333,7 +339,7 @@ def tag_exponent(tag, restart, config):
         prices = session.execute(
             "SELECT stock_id, open, close, high, low, increase, value, date FROM prices "
             "WHERE stock_id IN :stock AND date >= :date "
-            "ORDER BY 'date'",
+            "ORDER BY date",
             {'stock': [a.stock_id for a in rows], 'date': date}).all()
 
         data = {}
