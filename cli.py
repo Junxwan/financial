@@ -189,12 +189,58 @@ def get_financial(year, season, outpath, type):
 @cli.command('dividend')
 @click.option('-y', '--year', default=year, help="年")
 @click.option('-o', '--outPath', type=click.Path(), help="輸出路徑")
-def dividend(year, outpath):
-    outPath = os.path.join(outpath, "dividend")
+@click.option('-s', '--save', default=False, type=click.BOOL, help="是否保存在database")
+@click.option('-c', '--config', type=click.STRING, help="config")
+def dividend(year, outpath, save, config):
     data = twse.dividend(year)
-    data.to_csv(os.path.join(outPath, f"{year}.csv"), index=False, encoding='utf_8_sig')
 
-    log(f"save dividend {year}")
+    if save:
+        session = Session(db(config))
+        stocks = {v.code: v.id for v in session.execute("SELECT id, code FROM stocks order by code").all()}
+        dividend = {v.stock_id: v for v in
+                    session.execute("SELECT id, stock_id, cash, stock FROM dividends WHERE year = :year",
+                                    {'year': year}).all()
+                    }
+
+        deleteId = []
+        insert = []
+        for i, v in data[1:].iterrows():
+            code = v['code']
+            id = stocks[code]
+            if id in dividend:
+                if dividend[id].cash != float(v['現金股利']) or dividend[id].stock != float(v['股票股利']):
+                    deleteId.append(dividend[id].id)
+                else:
+                    continue
+
+            insert.append({
+                'stock_id': id,
+                'year': year,
+                'cash': v['現金股利'],
+                'stock': v['股票股利'],
+            })
+
+        if len(deleteId) > 0:
+            result = session.execute("DELETE FROM dividends WHERE id IN :ids", {'ids': deleteId})
+            if result.rowcount != len(deleteId):
+                logging.error("delete dividends error")
+                return
+
+            logging.info(f"delete dividends year:{year} count:{len(deleteId)}")
+
+        if len(insert) > 0:
+            result = session.execute(models.dividend.insert(), insert)
+            if result.rowcount != len(insert):
+                logging.error("insert dividends error")
+                return
+
+            logging.info(f"insert dividends year:{year} count:{len(insert)}")
+
+        session.commit()
+
+    else:
+        data.to_csv(os.path.join(os.path.join(outpath, "dividend"), f"{year}.csv"), index=False, encoding='utf_8_sig')
+        log(f"save dividend {year}")
 
 
 # 合併
@@ -731,8 +777,8 @@ def imports(type, path, dir, year, month, quarterly, config):
     if year is None:
         year = datetime.now().year
 
-    if type in [BALANCE_SHEET, CONSOLIDATED_INCOME_STATEMENT, CASH_FLOW_STATEMENT, CHANGES_IN_EQUITY,
-                DIVIDEND, MONTH_REVENUE, 'financial']:
+    if type in [BALANCE_SHEET, CONSOLIDATED_INCOME_STATEMENT, CASH_FLOW_STATEMENT, CHANGES_IN_EQUITY, MONTH_REVENUE,
+                'financial']:
         financial.imports(type, year, quarterly=quarterly, month=month, dir=dir, d=d)
     elif type == 'fund':
         fund.imports(year, month, dir, d)

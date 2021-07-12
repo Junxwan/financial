@@ -17,7 +17,7 @@ def imports(type, year, month=None, quarterly=None, dir=None, d: engine = None):
     if type is not None:
         if type == 'financial':
             types = ['balance_sheet', 'cash_flow_statement', 'changes_in_equity',
-                     'consolidated_income_statement', 'dividend']
+                     'consolidated_income_statement']
         else:
             types = [type]
 
@@ -48,8 +48,6 @@ def imports(type, year, month=None, quarterly=None, dir=None, d: engine = None):
                     continue
 
                 month_revenue(pd.read_csv(path), int(ym[0]), int(ym[1]), d)
-        if type == 'dividend':
-            pass
         else:
             data = {}
             for path in paths:
