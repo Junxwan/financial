@@ -192,6 +192,9 @@ def get_financial(year, season, outpath, type):
 @click.option('-s', '--save', default=False, type=click.BOOL, help="是否保存在database")
 @click.option('-c', '--config', type=click.STRING, help="config")
 def dividend(year, outpath, save, config):
+    if year is None:
+        year = datetime.now().year
+
     data = twse.dividend(year)
 
     if save:
