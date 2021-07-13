@@ -415,8 +415,14 @@ def tag_exponent(tag, restart, config):
                     continue
 
                 yClose = values[i - 1].close
+                open = round(((v.open / yClose) - 1) * 100, 2)
+
+                # 可能因為減資 增資 換股等股本事件造成股價出現大幅度跳或跌價 此時就跳過
+                if open > 10 or open < -10:
+                    continue
+
                 dates[date].append({
-                    'open': round(((v.open / yClose) - 1) * 100, 2),
+                    'open': open,
                     'close': v.increase,
                     'high': round(((v.high / v.open) - 1) * 100, 2),
                     'low': round(((v.low / v.open) - 1) * 100, 2),
