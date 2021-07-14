@@ -342,27 +342,28 @@ def price(type, path, config):
 
 # tag產業指數
 @cli.command('tag_exponent')
-@click.option('-t', '--tag', default=None, type=click.STRING, help="tag")
+@click.option('-t', '--code', multiple=True, type=click.STRING, help="code")
 @click.option('-r', '--restart', default=False, type=click.BOOL, help="重置")
 @click.option('-c', '--config', type=click.STRING, help="config")
-def tag_exponent(tag, restart, config):
+def tag_exponent(codes, restart, config):
     session = Session(db(file=config))
     tags = []
 
-    if tag is None:
+    if len(codes) == 0:
         for v in session.execute(
                 "SELECT stock_id, tag_id, tags.name FROM tag_exponents JOIN tags ON tags.id = tag_exponents.tag_id"
         ).all():
             tags.append(v)
     else:
-        row = session.execute(
-            "SELECT stock_id, tag_id, tags.name FROM tag_exponents JOIN tags ON tags.id = tag_exponents.tag_id WHERE tags.name = :tag",
-            {'tag': tag}).first()
+        rows = session.execute(
+            "SELECT stock_id, tag_id, tags.name FROM tag_exponents JOIN tags ON tags.id = tag_exponents.tag_id JOIN stocks ON stocks.id = tag_exponents.stock_id WHERE stocks.code IN :code",
+            {'code': codes}).all()
 
-        if row is None:
+        if rows is None:
             return
 
-        tags.append(row)
+        for row in rows:
+            tags.append(row)
 
     for stock in tags:
         if restart:
