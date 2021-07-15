@@ -2,7 +2,6 @@ import logging
 import time
 from datetime import datetime
 import requests
-import pandas as pd
 from bs4 import BeautifulSoup
 
 USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/85.0.4183.83 Safari/537.36'

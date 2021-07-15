@@ -11,7 +11,7 @@ import crawler.twse as twse
 import crawler.price as price
 import crawler.cmoney as cmoney
 import crawler.news as cnews
-import crawler.fund as fund
+import crawler.fund as cFund
 import pandas as pd
 from bs4 import BeautifulSoup
 from models import models
@@ -541,7 +541,7 @@ def sp500(code, out):
 @click.option('-c', '--id', type=click.INT, help="卷商id")
 @click.option('-o', '--out', type=click.Path(), help="輸出")
 def get_fund(year, month, id, out):
-    for ym, rows in fund.get(year=year, month=month, id=id).items():
+    for ym, rows in cFund.get(year=year, month=month, id=id).items():
         data = []
         f = os.path.join(out, str(ym)) + ".csv"
 
