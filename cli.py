@@ -593,6 +593,7 @@ def news(email, hours, login_email, login_pwd, save=False):
         ['經濟日報-外媒解析', cnews.money_udn('12925', '12937', date)],
         ['經濟日報-產業動態', cnews.money_udn('12925', '121852', date)],
         ['經濟日報-產業分析', cnews.money_udn('12925', '12989', date)],
+        ['經濟日報-證卷', cnews.money_udn_stock(date)],
         ['工商時報-產業', cnews.ctee(date, 'industry')],
         ['工商時報-科技', cnews.ctee(date, 'tech')],
         ['工商時報-國際', cnews.ctee(date, 'global')],

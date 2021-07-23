@@ -159,6 +159,48 @@ def money_udn(cate_id, sub_id, end_date, timezone='Asia/Taipei'):
     return news
 
 
+# 經濟日報-證卷
+# https://ctee.com.tw/category/news/stocks
+def money_udn_stock(end_date, timezone='Asia/Taipei'):
+    news = []
+    page = 1
+    isRun = True
+    tz = pytz.timezone(timezone)
+
+    while isRun:
+        if page >= LIMIT:
+            break
+
+        r = requests.get(
+            f"https://ctee.com.tw/category/news/stocks/page/{page}",
+            headers=HEADERS
+        )
+
+        if r.status_code != 200:
+            break
+
+        soup = BeautifulSoup(r.text, 'html.parser')
+
+        for v in soup.select('article'):
+            date = dt.fromtimestamp(parser.parse(v.find('time').attrs['datetime']).timestamp(), tz=tz).strftime(
+                '%Y-%m-%d %H:%M:%S')
+
+            if date <= end_date:
+                isRun = False
+                break
+
+            news.append({
+                'title': v.find('h2').text,
+                'url': v.find('a').attrs['href'],
+                'date': date,
+            })
+
+        page = page + 1
+
+        time.sleep(1)
+
+    return news
+
 # 經濟日報章內容
 def money_udn_context(url):
     r = requests.get(url, headers=HEADERS)
