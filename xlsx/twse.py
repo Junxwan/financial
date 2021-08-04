@@ -474,3 +474,56 @@ def price(dir, d: engine, batch=False):
 
     if batch and len(insert) > 0:
         create(insert, 'all')
+
+
+# 當沖
+def day_trades(dir, d: engine):
+    session = Session(d)
+    stocks = {v.code: v.id for v in session.execute(models.stock.select()).all()}
+    update = {
+        'day_trades_volume': [],
+        'day_tradeB_value': [],
+        'day_tradeS_value': [],
+    }
+
+    for p in glob.glob(os.path.join(dir, "*.csv")):
+        name = os.path.split(p)[1].split('.')[0]
+
+        if name not in stocks:
+            logging.info(f"{name} not found")
+            return False
+
+        for i, v in pd.read_csv(p).iterrows():
+            id = stocks[name]
+            date = str(int(v['date']))
+            date = f"{date[:4]}-{date[4:6]}-{date[6:8]}"
+
+            update['day_trades_volume'].append({
+                'date': date,
+                'code': id,
+                'value': v['day_trades'],
+            })
+
+            update['day_tradeB_value'].append({
+                'date': date,
+                'code': id,
+                'value': v['day_tradeB_value'],
+            })
+
+            update['day_tradeS_value'].append({
+                'date': date,
+                'code': id,
+                'value': v['day_tradeS_value '],
+            })
+
+    for key, values in update.items():
+        when = [f"WHEN stock_id = {v['code']} AND date = '{v['date']}' THEN {int(v['value'])}" for v in values]
+        result = session.execute(f"UPDATE prices SET {key} = CASE " + " ".join(when) + f" ELSE {key} END")
+
+        if result.rowcount == 0:
+            logging.error(f"update prices {key}")
+            return
+
+        logging.info(f"update prices {key} count: {len(values)}")
+
+    session.commit()

@@ -797,6 +797,8 @@ def imports(type, path, dir, year, month, quarterly, config):
         xtwse.exponent(dir, d)
     elif type == 'price':
         xtwse.price(dir, d, batch=True)
+    elif type == 'day_trades':
+        xtwse.price(dir, d)
 
 
 # 匯出
