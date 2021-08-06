@@ -44,6 +44,10 @@ def get(year=None, month=None, id=None):
 
     data = {}
     for ym in yms[::-1]:
+        if ym not in dates:
+            logging.info(f"{ym} fund not found")
+            continue
+
         data[ym] = []
 
         for id in ids:

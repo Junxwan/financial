@@ -169,7 +169,9 @@ def month_revenue(year, month, outpath, save, config):
 @click.option('-s', '--season', default=0, help="季")
 @click.option('-o', '--outPath', type=click.Path(), help="輸出路徑")
 @click.option('-t', '--type', default='all', type=click.Choice(FINANCIAL_TYPE, case_sensitive=False), help="財報類型")
-def get_financial(year, season, outpath, type):
+@click.option('-s', '--save', default=False, type=click.BOOL, help="是否保存在database")
+@click.option('-c', '--config', type=click.STRING, help="config")
+def get_financial(year, season, outpath, type, save, config):
     if year == 0:
         year = datetime.now().year
 
@@ -183,6 +185,9 @@ def get_financial(year, season, outpath, type):
             _get_financial(year, season, outpath, t)
     else:
         _get_financial(year, season, outpath, type)
+
+    if save:
+        financial.imports('financial', year, dir=outpath, d=db(file=config))
 
 
 # 股利
@@ -540,7 +545,22 @@ def sp500(code, out):
 @click.option('-m', '--month', type=click.INT, help="月")
 @click.option('-c', '--id', type=click.INT, help="卷商id")
 @click.option('-o', '--out', type=click.Path(), help="輸出")
-def get_fund(year, month, id, out):
+@click.option('-s', '--save', default=False, type=click.BOOL, help="保存")
+@click.option('-c', '--config', type=click.STRING, help="config")
+def get_fund(year, month, id, out, save, config):
+    if save:
+        if year is None:
+            year = datetime.now().year
+        if month is None:
+            month = datetime.now().month - 1
+            if month == 0:
+                year -= 1
+                month = 12
+
+        m = "%02d" % month
+        if os.path.exists(os.path.join(out, f"{year}{m}") + ".csv"):
+            return
+
     for ym, rows in cFund.get(year=year, month=month, id=id).items():
         data = []
         f = os.path.join(out, str(ym)) + ".csv"
@@ -557,6 +577,9 @@ def get_fund(year, month, id, out):
             data,
             columns=['c_name', 'f_name', 'code', 'name', 'amount', 'total', 'type']
         ).to_csv(f, index=False, encoding='utf_8_sig')
+
+        if save:
+            fund.imports(int(ym[:4]), int(month[4:]), out, db(file=config))
 
 
 # 新聞
