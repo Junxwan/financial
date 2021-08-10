@@ -884,11 +884,12 @@ def _get_financial(year, season, outpath, type):
             if len(d) == 0:
                 log(f"{type} {code} not found")
             else:
+                i = 0
                 for k, v in d.items():
                     dir = os.path.join(outPath, k)
                     f = os.path.join(dir, f"{code}.csv")
 
-                    if os.path.exists(f):
+                    if os.path.exists(f) and i == 0:
                         continue
 
                     if os.path.exists(dir) == False:
@@ -897,6 +898,7 @@ def _get_financial(year, season, outpath, type):
                     v.to_csv(f, index=False, encoding='utf_8_sig')
 
                     log(f"save {type} {code} {k}")
+                    i += 1
 
             time.sleep(6)
 
