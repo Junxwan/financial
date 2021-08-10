@@ -223,13 +223,12 @@ def changes_in_equity(dataFrames: dict, year, quarterly, d: engine):
     }, dataFrames, year, quarterly, d, models.equity)
 
     q = Session(d)
-    yq = dataFrames.columns[2]
 
     stock = q.execute(
         'SELECT `stocks`.`code`, `equities`.`end_stock` FROM equities JOIN stocks ON stock_id = `stocks`.`id` WHERE year = :year AND quarterly = :quarterly',
         {
-            'year': yq[:4],
-            'quarterly': yq[-1],
+            'year': year,
+            'quarterly': quarterly,
         }
     ).all()
 
