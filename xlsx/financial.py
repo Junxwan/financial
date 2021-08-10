@@ -210,16 +210,16 @@ def cash_flow_statement(dataFrames: dict, year, quarterly, d: engine):
 # 權益變動表
 def changes_in_equity(dataFrames: dict, year, quarterly, d: engine):
     codes = _import({
-        '股本合計-期初餘額': 'start_stock',
-        '股本合計-期末餘額': 'end_stock',
-        '資本公積-期初餘額': 'start_capital_reserve',
-        '資本公積-期末餘額': 'end_capital_reserve',
-        '法定盈餘公積-期初餘額': 'start_surplus_reserve',
-        '法定盈餘公積-期末餘額': 'end_surplus_reserve',
-        '未分配盈餘（或待彌補虧損）-期初餘額': 'start_undistributed_surplus',
-        '未分配盈餘（或待彌補虧損）-期末餘額': 'end_undistributed_surplus',
-        '權益總額-期初餘額': 'start_equity',
-        '權益總額-期末餘額': 'end_equity',
+        '期初餘額-股本合計': 'start_stock',
+        '期末餘額-股本合計': 'end_stock',
+        '期初餘額-資本公積': 'start_capital_reserve',
+        '期末餘額-資本公積': 'end_capital_reserve',
+        '期初餘額-法定盈餘公積': 'start_surplus_reserve',
+        '期末餘額-法定盈餘公積': 'end_surplus_reserve',
+        '期初餘額-未分配盈餘（或待彌補虧損）': 'start_undistributed_surplus',
+        '期末餘額-未分配盈餘（或待彌補虧損）': 'end_undistributed_surplus',
+        '期初餘額-權益總額': 'start_equity',
+        '期末餘額-權益總額': 'end_equity',
     }, dataFrames, year, quarterly, d, models.equity)
 
     q = Session(d)
@@ -346,11 +346,26 @@ def _import(header, dataFrames: dict, year, quarterly, d: engine, model: schema)
 
     for code, value in dataFrames.items():
         data[code] = {}
-        for v in list(value.values):
-            if v[0] not in header:
+        value = value.dropna(thresh=len(value.columns) - 1)
+        columns = list(value.columns)
+        indexs = list(value.iloc[:, 0])
+
+        for h in header:
+            hs = h.split('-')
+            if hs[0] not in indexs:
                 continue
 
-            data[code][header[v[0]]] = v[1]
+            i = indexs.index(hs[0])
+
+            if len(hs) > 1:
+                if hs[1] not in columns:
+                    continue
+
+                ii = columns.index(hs[1])
+            else:
+                ii = 1
+
+            data[code][header["-".join(hs)]] = value.iloc[i, ii]
 
         for k, v in header.items():
             if v not in data[code]:
