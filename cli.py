@@ -4,6 +4,7 @@ import time
 import glob
 import logging
 import smtplib
+import calendar
 import pymysql
 import eml_parser
 import requests
@@ -95,6 +96,107 @@ def db(file=None):
                          encoding='utf8')
 
 
+def weekCountOfmonth():
+    now = datetime.now()
+    c = 0
+    for w in calendar.Calendar().monthdayscalendar(now.year, now.month):
+        for i, d in enumerate(w):
+            if i >= 5 or d == 0:
+                continue
+            c += 1
+            if now.day == d:
+                return c
+
+    return 0
+
+
+# 財報
+def _get_financial(year, season, outpath, type):
+    result = []
+    if season == 0:
+        seasons = [4, 3, 2, 1]
+    else:
+        seasons = [season]
+
+    for season in seasons:
+        log(f"read {type} {year}-{season}")
+        for code in twse.season_codes(year, season):
+            outPath = os.path.join(outpath, type)
+
+            if os.path.exists(os.path.join(outPath, f"{year}Q{season}", f"{code}.csv")):
+                continue
+
+            def get(code, year, season):
+                return []
+
+            if type == BALANCE_SHEET:
+                get = twse.balance_sheet
+            elif type == CONSOLIDATED_INCOME_STATEMENT:
+                get = twse.consolidated_income_statement
+            elif type == CASH_FLOW_STATEMENT:
+                get = twse.cash_flow_statement
+            elif type == CHANGES_IN_EQUITY:
+                get = twse.changes_in_equity
+
+            d = {}
+            while (True):
+                try:
+                    d = get(code, year, season)
+                    break
+
+                except requests.exceptions.ConnectionError as e:
+                    logging.error(e.__str__())
+                    logging.info("等待重新執行")
+                    time.sleep(10)
+
+                except Exception as e:
+                    logging.error(e.__str__())
+                    break
+
+            if len(d) == 0:
+                log(f"{type} {code} not found")
+            else:
+                i = 0
+                for k, v in d.items():
+                    dir = os.path.join(outPath, k)
+                    f = os.path.join(dir, f"{code}.csv")
+
+                    if os.path.exists(f) and i == 0:
+                        continue
+
+                    if os.path.exists(dir) == False:
+                        os.mkdir(dir)
+
+                    v.to_csv(f, index=False, encoding='utf_8_sig')
+
+                    log(f"save {type} {code} {k}")
+                    i += 1
+
+                    result.append({'date': k, 'code': code, 'type': type})
+
+            time.sleep(6)
+
+    return result
+
+
+def setEmail(title, text):
+    content = MIMEMultipart()
+    content["from"] = conf['smtp']['login_email']
+    content["subject"] = title
+    content["to"] = conf['smtp']['email']
+    content.attach(MIMEText(text))
+
+    with smtplib.SMTP(host="smtp.gmail.com", port="587") as smtp:
+        try:
+            smtp.ehlo()  # 驗證SMTP伺服器
+            smtp.starttls()  # 建立加密傳輸
+            smtp.login(conf['smtp']['login_email'], conf['smtp']['password'])
+            smtp.send_message(content)
+            log(f"set {title} email ok")
+        except Exception as e:
+            error(f"set {title} email ok error {e.__str__()}")
+
+
 @click.group()
 def cli():
     dir = os.path.join(os.getcwd(), 'log')
@@ -122,7 +224,8 @@ def cli():
 @click.option('-o', '--outPath', type=click.Path(), help="輸出路徑")
 @click.option('-s', '--save', default=False, type=click.BOOL, help="是否保存在database")
 @click.option('-c', '--config', type=click.STRING, help="config")
-def month_revenue(year, month, outpath, save, config):
+@click.option('-n', '--notify', default=False, type=click.BOOL, help="通知")
+def month_revenue(year, month, outpath, save, config, notify):
     if month == 0:
         month = datetime.now().month
 
@@ -141,37 +244,50 @@ def month_revenue(year, month, outpath, save, config):
 
     log(f'read month_revenue {year}-{m}')
 
-    data = twse.month_revenue(year, month)
+    try:
+        data = twse.month_revenue(year, month)
 
-    if data is None:
-        error('not month_revenue')
-        return
+        if data is None:
+            error('not month_revenue')
+            return
 
-    if save:
-        for year, value in data.items():
-            financial.month_revenue(value, year, month, db(file=config))
-            log(f"save month_revenue {year}-{m}")
-    else:
-        dir = os.path.join(outpath, 'month_revenue', str(year))
-        if os.path.exists(dir) == False:
-            os.mkdir(dir)
-
-        for year, value in data.items():
+        if save:
+            for year, value in data.items():
+                financial.month_revenue(value, year, month, db(file=config))
+                log(f"save month_revenue {year}-{m}")
+        else:
             dir = os.path.join(outpath, 'month_revenue', str(year))
-            value.to_csv(os.path.join(dir, f"{year}-{m}.csv"), index=False, encoding='utf_8_sig')
+            if os.path.exists(dir) == False:
+                os.mkdir(dir)
 
-            log(f"save month_revenue {year}-{m}")
+            for year, value in data.items():
+                dir = os.path.join(outpath, 'month_revenue', str(year))
+                value.to_csv(os.path.join(dir, f"{year}-{m}.csv"), index=False, encoding='utf_8_sig')
+
+                log(f"save month_revenue {year}-{m}")
+
+        if notify:
+            setEmail(f"系統通知-{year}-{m}月營收", 'ok')
+
+    except Exception as e:
+        error(f"month_revenue error: {e.__str__()}")
+
+        if notify:
+            setEmail(f"系統通知錯誤-{year}-{m}月營收", f"{e.__str__()}")
 
 
 # 財報
 @cli.command('financial')
 @click.option('-y', '--year', default=0, help="年")
-@click.option('-s', '--season', default=0, help="季")
+@click.option('-q', '--season', default=0, help="季")
 @click.option('-o', '--outPath', type=click.Path(), help="輸出路徑")
 @click.option('-t', '--type', default='all', type=click.Choice(FINANCIAL_TYPE, case_sensitive=False), help="財報類型")
 @click.option('-s', '--save', default=False, type=click.BOOL, help="是否保存在database")
 @click.option('-c', '--config', type=click.STRING, help="config")
-def get_financial(year, season, outpath, type, save, config):
+@click.option('-n', '--notify', default=False, type=click.BOOL, help="通知")
+def get_financial(year, season, outpath, type, save, config, notify):
+    result = []
+
     if year == 0:
         year = datetime.now().year
 
@@ -182,12 +298,22 @@ def get_financial(year, season, outpath, type, save, config):
         FINANCIAL_TYPE.remove('all')
 
         for t in FINANCIAL_TYPE:
-            _get_financial(year, season, outpath, t)
+            result += _get_financial(year, season, outpath, t)
     else:
-        _get_financial(year, season, outpath, type)
+        result = _get_financial(year, season, outpath, type)
 
     if save:
-        financial.imports('financial', year, dir=outpath, d=db(file=config))
+        financial.imports('financial', year, quarterly=season, dir=outpath, d=db(file=config))
+
+    if notify and len(result) > 0:
+        s = ''
+        for v in list(result):
+            s += v.__str__() + '\n'
+
+        setEmail(f"系統通知-財報", s)
+
+
+# get_financial(2021, 1, 'C:\\docker\\www\\d', 'balance_sheet', True, None)
 
 
 # 股利
@@ -543,43 +669,69 @@ def sp500(code, out):
 @cli.command('fund')
 @click.option('-y', '--year', type=click.INT, help="年")
 @click.option('-m', '--month', type=click.INT, help="月")
-@click.option('-c', '--id', type=click.INT, help="卷商id")
+@click.option('-i', '--id', type=click.STRING, help="卷商id")
 @click.option('-o', '--out', type=click.Path(), help="輸出")
 @click.option('-s', '--save', default=False, type=click.BOOL, help="保存")
 @click.option('-c', '--config', type=click.STRING, help="config")
-def get_fund(year, month, id, out, save, config):
-    if save:
-        if year is None:
-            year = datetime.now().year
-        if month is None:
-            month = datetime.now().month - 1
-            if month == 0:
-                year -= 1
-                month = 12
+@click.option('-n', '--notify', default=False, type=click.BOOL, help="通知")
+def get_fund(year, month, id, out, save, config, notify):
+    if year is None:
+        year = datetime.now().year
+
+    if month == 0:
+        month = None
+    elif month is None:
+        month = datetime.now().month - 1
+        if month == 0:
+            year -= 1
+            month = 12
 
         m = "%02d" % month
         if os.path.exists(os.path.join(out, f"{year}{m}") + ".csv"):
             return
 
-    for ym, rows in cFund.get(year=year, month=month, id=id).items():
-        data = []
-        f = os.path.join(out, str(ym)) + ".csv"
+    now = datetime.now()
+    if now.year == year and (now.month - 1) == month:
+        c = weekCountOfmonth()
+        if c <= 10 or c > 15:
+            return
 
-        if os.path.exists(f):
-            continue
+    isSave = False
 
-        for v in rows:
-            for value in v['data']:
-                for code in value['data']:
-                    data.append([v['name'], value['name']] + list(code.values()))
+    try:
+        funds = cFund.get(year=year, month=month, id=id)
 
-        pd.DataFrame(
-            data,
-            columns=['c_name', 'f_name', 'code', 'name', 'amount', 'total', 'type']
-        ).to_csv(f, index=False, encoding='utf_8_sig')
+        for ym, rows in funds.items():
+            data = []
+            f = os.path.join(out, str(ym)) + ".csv"
 
-        if save:
-            fund.imports(int(ym[:4]), int(month[4:]), out, db(file=config))
+            if os.path.exists(f):
+                continue
+
+            for v in rows:
+                for value in v['data']:
+                    for code in value['data']:
+                        data.append([v['name'], v['code'], value['name']] + list(code.values()))
+
+            pd.DataFrame(
+                data,
+                columns=['c_name', 'c_code', 'f_name', 'code', 'name', 'amount', 'total', 'type']
+            ).to_csv(f, index=False, encoding='utf_8_sig')
+
+            isSave = True
+
+            if save:
+                fund.imports(int(ym[:4]), int(ym[4:]), out, db(file=config))
+
+        if isSave and notify:
+            t = "-".join(list(funds))
+            setEmail(f"系統通知-{t} 投信持股明細", 'ok')
+
+    except Exception as e:
+        error(f"fund error {e.__str__()}")
+
+        if isSave and notify:
+            setEmail(f"系統通知錯誤 投信持股明細", f"{e.__str__()}")
 
 
 # 新聞
@@ -837,70 +989,6 @@ def export(type, out, date, config):
         csv.tse_industry(date, out, d)
     elif (type == 'price'):
         csv.price(date, out, d)
-
-
-# 財報
-def _get_financial(year, season, outpath, type):
-    if season == 0:
-        seasons = [4, 3, 2, 1]
-    else:
-        seasons = [season]
-
-    for season in seasons:
-        log(f"read {type} {year}-{season}")
-        for code in twse.season_codes(year, season):
-            outPath = os.path.join(outpath, type)
-
-            if os.path.exists(os.path.join(outPath, f"{year}Q{season}", f"{code}.csv")):
-                continue
-
-            def get(code, year, season):
-                return []
-
-            if type == BALANCE_SHEET:
-                get = twse.balance_sheet
-            elif type == CONSOLIDATED_INCOME_STATEMENT:
-                get = twse.consolidated_income_statement
-            elif type == CASH_FLOW_STATEMENT:
-                get = twse.cash_flow_statement
-            elif type == CHANGES_IN_EQUITY:
-                get = twse.changes_in_equity
-
-            d = {}
-            while (True):
-                try:
-                    d = get(code, year, season)
-                    break
-
-                except requests.exceptions.ConnectionError as e:
-                    logging.error(e.__str__())
-                    logging.info("等待重新執行")
-                    time.sleep(10)
-
-                except Exception as e:
-                    logging.error(e.__str__())
-                    break
-
-            if len(d) == 0:
-                log(f"{type} {code} not found")
-            else:
-                i = 0
-                for k, v in d.items():
-                    dir = os.path.join(outPath, k)
-                    f = os.path.join(dir, f"{code}.csv")
-
-                    if os.path.exists(f) and i == 0:
-                        continue
-
-                    if os.path.exists(dir) == False:
-                        os.mkdir(dir)
-
-                    v.to_csv(f, index=False, encoding='utf_8_sig')
-
-                    log(f"save {type} {code} {k}")
-                    i += 1
-
-            time.sleep(6)
 
 
 if __name__ == '__main__':

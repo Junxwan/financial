@@ -233,7 +233,7 @@ def cash_flow_statement(code, year, season):
             return {}
 
         data[f"{int(d[:3]) + 1911}{s}"] = pd.DataFrame(
-            table.iloc[:, [0, 1 + (2 * i)]].to_numpy().tolist(),
+            table.iloc[:, [0, 1 + (1 * i)]].to_numpy().tolist(),
             columns=['項目', '金額']
         )
 

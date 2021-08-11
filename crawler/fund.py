@@ -33,7 +33,10 @@ def get(year=None, month=None, id=None):
     elif year is not None and month is not None:
         yms = [f"{year}{month:02}"]
     elif year is not None:
-        yms = [f"{year}{i + 1:02}" for i in range(datetime.now().month - 1)]
+        if year == datetime.now().year:
+            yms = [f"{year}{i + 1:02}" for i in range(datetime.now().month - 1)]
+        else:
+            yms = [f"{year}{i + 1:02}" for i in range(12)]
     elif month is not None:
         yms = [f"{datetime.now().year}{month:02}"]
 
@@ -92,6 +95,7 @@ def get(year=None, month=None, id=None):
 
             data[ym].append({
                 'name': fund_name[fund.index(id)],
+                'code': fund[fund.index(id)],
                 'data': tmps,
             })
 

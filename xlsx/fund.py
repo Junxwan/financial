@@ -17,13 +17,14 @@ def imports(year, month, dir, d: engine):
         paths = glob.glob(os.path.join(dir, f"{year}*.csv"))
 
     session = Session(d)
-    companies = {v.name: v.id for v in session.execute(models.company.select()).all()}
+    companies = {v.code: v.id for v in session.execute(models.company.select()).all()}
     stocks = {v.code: v.id for v in session.execute(models.stock.select()).all()}
 
     for p in paths:
         for name, v in pd.read_csv(p).groupby('c_name'):
-            if name not in companies:
-                result = session.execute(models.company.insert().returning())
+            code = v.iloc[0]['c_code']
+            if code not in companies:
+                result = session.execute(models.company.insert(), {'name': name, 'code': code})
 
                 if result.is_insert == False:
                     logging.info("insert company error")
@@ -32,9 +33,9 @@ def imports(year, month, dir, d: engine):
                     logging.info(f"save company {name}")
                     session.commit()
 
-                companies[name] = result.lastrowid
+                companies[code] = result.lastrowid
 
-            id = companies[name]
+            id = companies[code]
 
             # 基金
             funds = list(v.groupby('f_name').f_name.indices)

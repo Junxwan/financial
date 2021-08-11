@@ -49,6 +49,9 @@ def imports(type, year, month=None, quarterly=None, dir=None, d: engine = None):
 
                 month_revenue(pd.read_csv(path), int(ym[0]), int(ym[1]), d)
         else:
+            if len(paths) == 0:
+                continue
+
             data = {}
             for path in paths:
                 data[os.path.split(path)[1].split('.')[0]] = pd.read_csv(path)
@@ -82,21 +85,17 @@ def imports(type, year, month=None, quarterly=None, dir=None, d: engine = None):
                         f"DELETE FROM {model.name} WHERE stock_id IN ({','.join(str(e) for e in ids)}) AND year = {year} AND quarterly = {quarterly}"
                     )
 
-                    if result.rowcount != len(insert):
-                        logging.info(f"delete {model.name} error")
-                        return
-
                     session.commit()
                     logging.info(f"delete {model.name} year:{year}: quarterly:{quarterly} count:{result.rowcount}")
 
                     if type == 'consolidated_income_statement':
-                        consolidated_income_statement(data, year, quarterly, d)
+                        consolidated_income_statement(insert, year, quarterly, d)
                     elif type == 'balance_sheet':
-                        balance_sheet(data, year, quarterly, d)
+                        balance_sheet(insert, year, quarterly, d)
                     elif type == 'cash_flow_statement':
-                        cash_flow_statement(data, year, quarterly, d)
+                        cash_flow_statement(insert, year, quarterly, d)
                     elif type == 'changes_in_equity':
-                        changes_in_equity(data, year, quarterly, d)
+                        changes_in_equity(insert, year, quarterly, d)
 
                 if type == 'consolidated_income_statement':
                     deleteFinancial(

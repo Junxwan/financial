@@ -168,6 +168,7 @@ price = Table('prices', metadata,
 
 company = Table('companies', metadata,
                 Column('id', Integer, primary_key=True),
+                Column('code', Text),
                 Column('name', Text),
                 )
 
