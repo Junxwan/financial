@@ -14,7 +14,7 @@ financial:
 
 # 爬投信持股
 fund:
-    $(CLI) fund -o $(PATH) -s $(SAVE) -n $(NOTIFY)
+    $(CLI) fund -o $(PATH)/fund -s $(SAVE) -n $(NOTIFY)
 
 # 建立產業指數價格
 tag_exponent:
