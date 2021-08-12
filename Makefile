@@ -30,7 +30,7 @@ get_otc:
 
 # 爬新聞內容
 get_news_content:
-		$(CLI) price news-context
+		$(CLI) news-context
 
 # 爬股利
 dividend:
