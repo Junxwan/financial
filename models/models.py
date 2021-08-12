@@ -130,6 +130,8 @@ revenue = Table('revenues', metadata,
                 Column('year', Date),
                 Column('month', Integer),
                 Column('value', BigInteger),
+                Column('yoy', Float),
+                Column('qoq', Float),
                 )
 
 dividend = Table('dividends', metadata,
@@ -193,4 +195,3 @@ tagExponent = Table('tag_exponents', metadata,
                     Column('stock_id', Integer),
                     Column('tag_id', Integer),
                     )
-

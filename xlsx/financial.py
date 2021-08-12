@@ -2,6 +2,7 @@ import glob
 import os
 import logging
 import pandas as pd
+import numpy as np
 from models import models
 from pandas import DataFrame
 from sqlalchemy import schema
@@ -47,7 +48,7 @@ def imports(type, year, month=None, quarterly=None, dir=None, d: engine = None):
                 if month is not None and int(ym[1]) != month:
                     continue
 
-                month_revenue(pd.read_csv(path), int(ym[0]), int(ym[1]), d)
+                month_revenue(pd.read_csv(path).replace(np.nan, 0), int(ym[0]), int(ym[1]), d)
         else:
             if len(paths) == 0:
                 continue
@@ -270,7 +271,9 @@ def month_revenue(dataFrame: DataFrame, year, month, d: engine):
             'stock_id': codes[code],
             'year': year,
             'month': month,
-            'value': v['value'],
+            'value': v['當月營收'],
+            'qoq': v['qoq'],
+            'yoy': v['yoy'],
         })
 
     if len(insert) > 0:

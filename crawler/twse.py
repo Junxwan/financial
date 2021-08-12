@@ -41,20 +41,15 @@ def month_revenue(year, month):
             continue
 
         data = pd.concat([df for df in table if df.shape[1] == 11])
-        revenue = revenue + data.iloc[:, :5].to_numpy().tolist()
+        revenue = revenue + data.iloc[:, :7].to_numpy().tolist()
 
         time.sleep(6)
 
-    data = {}
+    d = pd.DataFrame(revenue, columns=['code', 'name', '當月營收', '上月營收', '去年同期營收', 'qoq', 'yoy']).sort_values(
+        by=['code']
+    )
 
-    for i, index in enumerate([2, 4]):
-        d = pd.DataFrame(
-            [v[:2] + [v[index]] for v in revenue], columns=['code', 'name', 'value']
-        ).sort_values(by=['code'])
-
-        data[year + 1911 - i] = d[d['code'] != '合計']
-
-    return data
+    return d[d['code'] != '合計']
 
 
 # 資產負債表
