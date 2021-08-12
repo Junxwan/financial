@@ -38,7 +38,7 @@ def month_revenue(year, month):
         try:
             table = pd.read_html(StringIO(r.text), encoding='big5-hkscs')
         except Exception as e:
-            continue
+            return None
 
         data = pd.concat([df for df in table if df.shape[1] == 11])
         revenue = revenue + data.iloc[:, :7].to_numpy().tolist()

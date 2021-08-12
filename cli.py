@@ -216,6 +216,7 @@ def cli():
                         filename=filename
                         )
 
+
 # 月營收
 @cli.command('month_revenue')
 @click.option('-y', '--year', default=0, help="年")
@@ -244,27 +245,23 @@ def month_revenue(year, month, outpath, save, config, notify):
     log(f'read month_revenue {year}-{m}')
 
     try:
-        data = {
-            year: twse.month_revenue(year, month),
-            year - 1: twse.month_revenue(year - 1, month),
-        }
+        data = twse.month_revenue(year, month)
 
         if data is None:
             error('not month_revenue')
             return
 
-        for year, value in data.items():
-            dir = os.path.join(outpath, 'month_revenue', str(year))
+        dir = os.path.join(outpath, 'month_revenue', str(year))
 
-            if os.path.exists(dir) == False:
-                os.mkdir(dir)
+        if os.path.exists(dir) == False:
+            os.mkdir(dir)
 
-            value.to_csv(os.path.join(dir, f"{year}-{m}.csv"), index=False, encoding='utf_8_sig')
+        data.to_csv(os.path.join(dir, f"{year}-{m}.csv"), index=False, encoding='utf_8_sig')
 
-            if save:
-                financial.imports('month_revenue', year, month=month, dir=outpath, d=db(file=config))
+        if save:
+            financial.imports('month_revenue', year, month=month, dir=outpath, d=db(file=config))
 
-            log(f"save month_revenue {year}-{m} csv")
+        log(f"save month_revenue {year}-{m} csv")
 
         if notify:
             setEmail(f"系統通知-{year}-{m}月營收", 'ok')
