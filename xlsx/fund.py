@@ -21,6 +21,8 @@ def imports(year, month, dir, d: engine):
     stocks = {v.code: v.id for v in session.execute(models.stock.select()).all()}
 
     for p in paths:
+        logging.info(f"read fund {p}")
+
         for name, v in pd.read_csv(p).groupby('c_name'):
             code = v.iloc[0]['c_code']
             if code not in companies:
@@ -102,3 +104,5 @@ def imports(year, month, dir, d: engine):
                 else:
                     logging.info(f"save fund stock {name} {len(insert)} count")
                     session.commit()
+
+        logging.info(f"end read fund {p}")
