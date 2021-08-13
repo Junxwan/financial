@@ -687,7 +687,7 @@ def get_fund(year, month, id, out, save, config, notify):
     now = datetime.now()
     if now.year == year and (now.month - 1) == month:
         c = weekCountOfmonth()
-        if c <= 10 or c > 15:
+        if c < 10 or c > 15:
             return
 
     isSave = False
