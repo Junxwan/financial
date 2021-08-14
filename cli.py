@@ -576,6 +576,9 @@ def tag_exponent(code, restart, config):
 
                 l = len(value)
 
+                if l == 0:
+                    continue
+
                 tmpInsert[date] = {
                     'stock_id': stock.stock_id,
                     'date': date,
