@@ -348,7 +348,7 @@ def _import(header, dataFrames: dict, year, quarterly, d: engine, model: schema)
 
     for code, value in dataFrames.items():
         data[code] = {}
-        value = value.dropna(thresh=len(value.columns) - 1)
+        value = value.dropna(how='all', subset=list(value.columns)[1:], axis='index')
         columns = list(value.columns)
         indexs = list(value.iloc[:, 0])
 
