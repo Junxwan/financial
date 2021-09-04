@@ -38,6 +38,8 @@ def month_revenue(year, month):
         try:
             table = pd.read_html(StringIO(r.text), encoding='big5-hkscs')
         except Exception as e:
+            if BeautifulSoup(r.text, 'html.parser').find_all('h3')[1].text == '查無資料':
+                continue
             return None
 
         data = pd.concat([df for df in table if df.shape[1] == 11])
