@@ -274,6 +274,9 @@ def month_revenue(dataFrame: DataFrame, year, month, d: engine):
             'value': v['當月營收'],
             'qoq': v['qoq'],
             'yoy': v['yoy'],
+            'total': v['當月累積營收'],
+            'y_total': v['去年同期累積營收'],
+            'total_increase': v['累積營收比較增減'],
         })
 
     if len(insert) > 0:

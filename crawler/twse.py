@@ -43,11 +43,11 @@ def month_revenue(year, month):
             return None
 
         data = pd.concat([df for df in table if df.shape[1] == 11])
-        revenue = revenue + data.iloc[:, :7].to_numpy().tolist()
+        revenue = revenue + data.iloc[:, :10].to_numpy().tolist()
 
         time.sleep(6)
 
-    d = pd.DataFrame(revenue, columns=['code', 'name', '當月營收', '上月營收', '去年同期營收', 'qoq', 'yoy']).sort_values(
+    d = pd.DataFrame(revenue, columns=['code', 'name', '當月營收', '上月營收', '去年同期營收', 'qoq', 'yoy', '當月累積營收', '去年同期累積營收', '累積營收比較增減']).sort_values(
         by=['code']
     )
 
