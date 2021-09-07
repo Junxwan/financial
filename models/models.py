@@ -132,6 +132,9 @@ revenue = Table('revenues', metadata,
                 Column('value', BigInteger),
                 Column('yoy', Float),
                 Column('qoq', Float),
+                Column('total', BigInteger),
+                Column('y_total', BigInteger),
+                Column('total_increase', Float),
                 )
 
 dividend = Table('dividends', metadata,
