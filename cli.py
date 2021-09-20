@@ -1005,7 +1005,7 @@ def cbs(type, config):
 
     if type == 'info':
         insert = []
-        cbs = cb.list()
+        cbs = cb.new()
         stocks = {s.code: s.id for s in session.execute("SELECT id, code FROM stocks").all()}
         cbs = {c[0]: c for c in cbs}
         codes = [c.code for c in session.execute("SELECT code FROM cbs").all()]

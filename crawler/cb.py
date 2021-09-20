@@ -10,7 +10,12 @@ HEADERS = {
 }
 
 
-def list():
+def _url(code, period, year, month):
+    return f"https://mops.twse.com.tw/mops/web/t120sg01?TYPEK=&bond_id={code}{period}&bond_kind=5&bond_subn=%24M00000001&bond_yrn={period}&come=2&encodeURIComponent=1&firstin=ture&issuer_stock_code={code}&monyr_reg={year}{month}&pg=&step=0&tg="
+
+
+# 最近上櫃可轉債
+def new():
     data = []
 
     r = requests.get("https://www.tpex.org.tw/web/bond/publish/convertible_bond_search/memo.php?l=zh-tw",
@@ -32,6 +37,32 @@ def list():
     return data
 
 
+# 根據年月查詢可轉債
+def select(year, month):
+    data = {}
+
+    r = requests.post("https://sii.twse.com.tw/server-java/t120sc11", {
+        'id': '',
+        'key': '',
+        'TYPEK': '',
+        'step': 1,
+        'excel': 0,
+        'typek': '',
+        'type': 2,
+        'year': year - 1911,
+        'month': month,
+    }, headers=HEADERS)
+    r.encoding = 'big5-hkscs'
+
+    for index, value in pd.read_html(StringIO(r.text))[1].iterrows():
+        if value['發行種類'] != '轉(交)換公司債' or value['證券代號'] == '合計' or value['債券掛牌情形'] == '未掛牌交易':
+            continue
+
+        data[value['債券代碼']] = _url(value['證券代號'], value['債券期別'], year, "%02d" % month)
+
+    return data
+
+
 def findByUrl(url):
     url = url.replace("http://", "https://")
 
@@ -42,7 +73,12 @@ def findByUrl(url):
 
     r.encoding = 'utf-8'
     html = BeautifulSoup(r.text, 'html.parser')
-    trs = html.find('table', class_='hasBorder').find_all('tr')
+    table = html.find('table', class_='hasBorder')
+
+    if table is None:
+        return None
+
+    trs = table.find_all('tr')
 
     startDate = trs[2].contents[0].text.replace('發行日期：', '').split('/')
     startDate[0] = str(int(startDate[0]) + 1911)
