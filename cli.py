@@ -13,6 +13,7 @@ import crawler.price as price
 import crawler.cmoney as cmoney
 import crawler.news as cnews
 import crawler.fund as cFund
+import crawler.cb as cb
 import pandas as pd
 from bs4 import BeautifulSoup
 from models import models
@@ -992,6 +993,41 @@ def export(type, out, date, config):
         csv.tse_industry(date, out, d)
     elif (type == 'price'):
         csv.price(date, out, d)
+
+
+# 可轉債
+@cli.command('cb')
+@click.option('-t', '--type', type=click.STRING, help="類型")
+@click.option('-c', '--config', type=click.STRING, help="config")
+def cbs(type, config):
+    d = db(file=config)
+    session = Session(d)
+
+    if type == 'info':
+        insert = []
+        cbs = cb.list()
+        stocks = {s.code: s.id for s in session.execute("SELECT id, code FROM stocks").all()}
+        cbs = {c[0]: c for c in cbs}
+        codes = [c.code for c in session.execute("SELECT code FROM cbs").all()]
+        for code in set(cbs.keys()).difference(codes):
+            c = cbs[code]
+            info = cb.findByUrl(c[6])
+
+            if info is None:
+                continue
+
+            info['stock_id'] = stocks[code[:-1]]
+            insert.append(info)
+            logging.info(f"read cb info {code} {info['name']}")
+            time.sleep(6)
+
+        result = session.execute(models.cb.insert(), insert)
+        if result.is_insert == False or result.rowcount != len(insert):
+            logging.info("insert cb error")
+            return False
+        else:
+            logging.info(f"save cb {len(insert)} count")
+            session.commit()
 
 
 if __name__ == '__main__':
