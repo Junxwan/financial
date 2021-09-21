@@ -1,5 +1,5 @@
 import time
-
+import csv
 import requests
 import pandas as pd
 import numpy as np
@@ -223,5 +223,73 @@ def balance(year, month):
                 'change_stock': change_stock,
                 'balance_stock': balance_stock
             }
+
+    return data
+
+
+# 價格
+# https://www.tpex.org.tw/web/bond/tradeinfo/cb/CBDaily.php?l=zh-tw
+def price(year, month):
+    data = {}
+
+    r = requests.post("https://www.tpex.org.tw/web/bond/tradeinfo/cb/CBDaily.php?l=zh-tw", {
+        'inputY': year,
+        'inputM': month,
+        'inputFileCode': 'rsta0113',
+    }, headers=HEADERS)
+
+    r.encoding = 'utf-8'
+
+    for tr in BeautifulSoup(r.text, 'html.parser').find('table').find_all('tr')[2:]:
+        r = requests.get('https://www.tpex.org.tw' + tr.contents[1].find('a').attrs['href'], headers=HEADERS)
+        r.encoding = 'big5-hkscs'
+
+        dates = tr.contents[0].text.split('/')
+        dates[0] = str(int(dates[0]) + 1911)
+        date = "-".join(dates)
+        data[date] = []
+
+        for index, value in pd.read_csv(StringIO('\r\n'.join(r.text.split('\r\n')[3:])),
+                                        encoding='big5-hkscs').iterrows():
+            if type(value['代號']) != str or value['交易'] == '議價':
+                continue
+
+            if np.isnan(value['開市']):
+                open = value['明日參價']
+                close = open
+                high = open
+                low = open
+                volume = 0
+                increase = 0
+                amplitude = 0
+                amount = 0
+            else:
+                open = value['開市']
+                close = value['收市']
+                high = value['最高']
+                low = value['最低']
+                volume = int(value['單位'].replace(",", ""))
+                amplitude = round(((high / low) - 1) * 100, 2)
+                amount = int(value['金額'].replace(",", ""))
+
+                if np.isnan(value['漲跌']):
+                    increase = 0
+                else:
+                    increase = round(((close / (close - value['漲跌'])) - 1) * 100, 2)
+
+            data[date].append({
+                'code': value['代號'],
+                'date': date,
+                'open': open,
+                'close': close,
+                'high': high,
+                'low': low,
+                'volume': volume,
+                'increase': increase,
+                'amplitude': amplitude,
+                'amount': amount,
+            })
+
+        time.sleep(6)
 
     return data

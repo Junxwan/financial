@@ -239,3 +239,17 @@ cbBalance = Table('cb_balances', metadata,
                   Column('change_stock', Integer),
                   Column('balance_stock', Integer),
                   )
+
+cbPrice = Table('cb_prices', metadata,
+                Column('id', Integer, primary_key=True),
+                Column('cb_id', Integer),
+                Column('date', Date),
+                Column('open', Float),
+                Column('close', Float),
+                Column('high', Float),
+                Column('low', Float),
+                Column('increase', Float),
+                Column('amplitude', Float),
+                Column('volume', BigInteger),
+                Column('amount', BigInteger),
+                )

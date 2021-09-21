@@ -40,14 +40,18 @@ dividend:
 import_stock_price:
 		$(CLI) import-to-database -t price -d $(PATH)
 
-# add 可轉債
+# 可轉債
 cb_info:
 		$(CLI) cp -t info -n $(NOTIFY)
 
-# add 可轉債轉換價格
+# 可轉債轉換價格
 cb_conversion_price:
 		$(CLI) cp -t cb_conversion_price -n $(NOTIFY)
 
-# add 可轉債餘額
+# 可轉債餘額
 cb_balance:
 		$(CLI) cp -t balance -n $(NOTIFY)
+
+# 可賺債價格
+cb_price:
+		$(CLI) cp -t price -n $(NOTIFY)

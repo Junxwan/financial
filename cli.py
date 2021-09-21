@@ -1084,6 +1084,7 @@ def cbs(type, year, month, notify, config):
 
                 session.commit()
 
+        # 餘額
         if type == 'balance':
             if year is None:
                 year = datetime.now().year
@@ -1126,6 +1127,44 @@ def cbs(type, year, month, notify, config):
                     return False
                 else:
                     logging.info(f"save cb balance count: {len(insert)}")
+                    session.commit()
+
+        # 價格
+        if type == 'price':
+            cbs = {v.code: v.id for v in session.execute("SELECT id, code FROM cbs").all()}
+            for date, prices in cb.price(year, month).items():
+                insert = []
+                exist = session.execute("SELECT * FROM cb_prices where date = :date limit 1", {'date': date, }).first()
+
+                if exist is not None:
+                    continue
+
+                for price in prices:
+                    if price['code'] not in cbs:
+                        continue
+
+                    insert.append({
+                        'cb_id': cbs[price['code']],
+                        'date': price['date'],
+                        'open': price['open'],
+                        'close': price['close'],
+                        'high': price['high'],
+                        'low': price['low'],
+                        'volume': price['volume'],
+                        'increase': price['increase'],
+                        'amplitude': price['amplitude'],
+                        'amount': price['amount'],
+                    })
+
+                if len(insert) == 0:
+                    continue
+
+                result = session.execute(models.cbPrice.insert(), insert)
+                if result.is_insert == False or result.rowcount != len(insert):
+                    logging.error(f"save cb price count: {len(insert)}")
+                    return False
+                else:
+                    logging.info(f"save cb price count: {len(insert)}")
                     session.commit()
 
         if notify:
