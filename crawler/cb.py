@@ -1,3 +1,5 @@
+import time
+
 import requests
 import pandas as pd
 from io import StringIO
@@ -15,6 +17,7 @@ def _url(code, period, year, month):
 
 
 # 最近上櫃可轉債
+# https://www.tpex.org.tw/web/bond/publish/convertible_bond_search/memo.php?l=zh-tw
 def new():
     data = []
 
@@ -38,6 +41,7 @@ def new():
 
 
 # 根據年月查詢可轉債
+# https://sii.twse.com.tw/server-java/t120sc11?step=0&TYPEK=
 def select(year, month):
     data = {}
 
@@ -63,6 +67,8 @@ def select(year, month):
     return data
 
 
+# 公開資料
+# https://mops.twse.com.tw/mops/web/t120sg01?TYPEK=&bond_id=30881&bond_kind=5&bond_subn=%24M00000001&bond_yrn=1&come=2&encodeURIComponent=1&firstin=ture&issuer_stock_code=3088&monyr_reg=202108&pg=&step=0&tg=
 def findByUrl(url):
     url = url.replace("http://", "https://")
 
@@ -117,3 +123,54 @@ def findByUrl(url):
         'is_collateral': trs[30].contents[0].text.replace('擔保情形：', '').split('，')[0] == '有',
         'url': url,
     }
+
+
+# 轉換價格
+def conversionPrice(code):
+    data = []
+
+    r = requests.post("https://mops.twse.com.tw/mops/web/ajax_t120sg06", {
+        'encodeURIComponent': 1,
+        'firstin': True,
+        'bond_id': code,
+        'step': 1,
+        'data_type': '',
+        'date1': '',
+        'date2': '',
+    }, headers=HEADERS)
+    r.encoding = 'utf-8'
+
+    type = {
+        '掛牌': 1,
+        '反稀釋': 2,
+        '重設': 3,
+        '不重設': 4,
+        '特別重設': 5,
+        '不特別重設': 6,
+    }
+
+    try:
+        eDates = []
+        for index, value in pd.read_html(StringIO(r.text))[0].iterrows():
+            dates = value['重設日期(起迄日期)'].split('/')
+            dates[0] = str(int(dates[0]) + 1911)
+            date = "-".join(dates),
+
+            if date in eDates:
+                continue
+
+            data.append({
+                'type': type[value['類型']],
+                'value': value['轉(交)換價格'],
+                'stock': value['轉(交)換股數'],
+                'date': date,
+            })
+
+            eDates.append(date)
+    except ConnectionError as e:
+        time.sleep(30)
+        return conversionPrice(code)
+    except Exception as e:
+        return data
+
+    return data

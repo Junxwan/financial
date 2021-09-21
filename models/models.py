@@ -219,3 +219,12 @@ cb = Table('cbs', metadata,
            Column('is_collateral', Integer),
            Column('url', String(255)),
            )
+
+cbConversionPrices = Table('cb_conversion_prices', metadata,
+                           Column('id', Integer, primary_key=True),
+                           Column('cb_id', Integer),
+                           Column('value', Float),
+                           Column('stock', Integer),
+                           Column('date', Date),
+                           Column('type', Integer),
+                           )

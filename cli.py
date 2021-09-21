@@ -998,36 +998,96 @@ def export(type, out, date, config):
 # 可轉債
 @cli.command('cb')
 @click.option('-t', '--type', type=click.STRING, help="類型")
+@click.option('-n', '--notify', default=False, type=click.BOOL, help="通知")
 @click.option('-c', '--config', type=click.STRING, help="config")
-def cbs(type, config):
+def cbs(type, notify, config):
     d = db(file=config)
     session = Session(d)
 
-    if type == 'info':
-        insert = []
-        cbs = cb.new()
-        stocks = {s.code: s.id for s in session.execute("SELECT id, code FROM stocks").all()}
-        cbs = {c[0]: c for c in cbs}
-        codes = [c.code for c in session.execute("SELECT code FROM cbs").all()]
-        for code in set(cbs.keys()).difference(codes):
-            c = cbs[code]
-            info = cb.findByUrl(c[6])
+    try:
+        # 近期發行可轉債
+        if type == 'info':
+            insert = []
+            cbs = cb.new()
+            stocks = {s.code: s.id for s in session.execute("SELECT id, code FROM stocks").all()}
+            cbs = {c[0]: c for c in cbs}
+            codes = [c.code for c in session.execute("SELECT code FROM cbs").all()]
+            for code in set(cbs.keys()).difference(codes):
+                c = cbs[code]
+                info = cb.findByUrl(c[6])
 
-            if info is None:
-                continue
+                if info is None:
+                    continue
 
-            info['stock_id'] = stocks[code[:-1]]
-            insert.append(info)
-            logging.info(f"read cb info {code} {info['name']}")
-            time.sleep(6)
+                info['stock_id'] = stocks[code[:-1]]
+                insert.append(info)
+                logging.info(f"read cb info {code} {info['name']}")
+                time.sleep(6)
 
-        result = session.execute(models.cb.insert(), insert)
-        if result.is_insert == False or result.rowcount != len(insert):
-            logging.info("insert cb error")
-            return False
-        else:
-            logging.info(f"save cb {len(insert)} count")
-            session.commit()
+            result = session.execute(models.cb.insert(), insert)
+            if result.is_insert == False or result.rowcount != len(insert):
+                logging.info("insert cb error")
+                return False
+            else:
+                logging.info(f"save cb {len(insert)} count")
+                session.commit()
+
+        # 調整轉換價格
+        if type == 'conversion_price':
+            cbs = {c.code: c.id for c in
+                   session.execute("SELECT id, code FROM cbs where start_date <= :date AND end_date >= :date",
+                                   {
+                                       'date': datetime.now().strftime("%Y-%m-%d"),
+                                   }).all()}
+
+            for code, id in cbs.items():
+                insert = []
+                prices = cb.conversionPrice(code)
+                time.sleep(6)
+
+                value = session.execute("SELECT date FROM cb_conversion_prices WHERE cb_id = :id order by date desc",
+                                        {'id': id}).all()
+                diff = set([v['date'][0] for v in prices]).difference([v.date.__str__() for v in value])
+
+                for p in prices:
+                    if p['date'][0] not in diff:
+                        continue
+
+                    insert.append({
+                        'cb_id': id,
+                        'value': p['value'],
+                        'stock': p['stock'],
+                        'date': p['date'][0],
+                        'type': p['type'],
+                    })
+
+                if len(insert) == 0:
+                    logging.info(f"not save cb conversion price code: {code}")
+                    continue
+
+                result = session.execute(models.cbConversionPrices.insert(), insert)
+                if result.is_insert == False or result.rowcount != len(insert):
+                    logging.error(f"save cb conversion price code: {code} count: {len(insert)}")
+                    return False
+                else:
+                    logging.info(f"save cb conversion price code: {code} count: {len(insert)}")
+
+                result = session.execute("update cbs set conversion_price = :price where id = :id",
+                                         {'price': prices[0]['value'], 'id': id})
+
+                if result.rowcount != 1:
+                    logging.error(f"update cb conversion price code: {code}")
+                else:
+                    logging.info(f"update cb conversion price code: {code}")
+
+                session.commit()
+
+        if notify:
+            setEmail(f"系統通知 {type} 可轉債", "ok")
+
+    except Exception as e:
+        if notify:
+            setEmail(f"系統通知錯誤 {type} 可轉債", f"{e.__str__()}")
 
 
 if __name__ == '__main__':
