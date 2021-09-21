@@ -42,12 +42,12 @@ import_stock_price:
 
 # add 可轉債
 cb_info:
-		$(CLI) cp -t info
+		$(CLI) cp -t info -n $(NOTIFY)
 
 # add 可轉債轉換價格
 cb_conversion_price:
-		$(CLI) cp -t cb_conversion_price
+		$(CLI) cp -t cb_conversion_price -n $(NOTIFY)
 
 # add 可轉債餘額
 cb_balance:
-		$(CLI) cp -t balance
+		$(CLI) cp -t balance -n $(NOTIFY)
