@@ -115,6 +115,7 @@ def findByUrl(url):
         'apply_total_amount': int(trs[12].contents[0].text.replace('申請發行總額：', '').replace(',', '').replace('元', '')),
         'publish_total_amount': int(trs[13].contents[0].text.replace('實際發行總額：', '').replace(',', '').replace('元', '')),
         'publish_price': float(trs[24].contents[0].text.replace('發行價格：', '').split('元')[0]),
+        'conversion_price': float(trs[26].contents[0].text.replace('發行時轉(交)換價格：', '').split('元')[0]),
         'start_conversion_date': "-".join(startConversionDate),
         'end_conversion_date': "-".join(endConversionDate),
         'conversion_premium_rate': float(trs[26].contents[2].text.replace('轉換溢價率：', '').replace('%', '')),
