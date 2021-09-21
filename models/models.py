@@ -228,3 +228,14 @@ cbConversionPrices = Table('cb_conversion_prices', metadata,
                            Column('date', Date),
                            Column('type', Integer),
                            )
+
+cbBalance = Table('cb_balances', metadata,
+                  Column('id', Integer, primary_key=True),
+                  Column('cb_id', Integer),
+                  Column('year', Integer),
+                  Column('month', Integer),
+                  Column('change', Integer),
+                  Column('balance', Integer),
+                  Column('change_stock', Integer),
+                  Column('balance_stock', Integer),
+                  )

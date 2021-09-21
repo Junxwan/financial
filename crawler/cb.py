@@ -2,6 +2,7 @@ import time
 
 import requests
 import pandas as pd
+import numpy as np
 from io import StringIO
 from bs4 import BeautifulSoup
 
@@ -173,5 +174,54 @@ def conversionPrice(code):
         return conversionPrice(code)
     except Exception as e:
         return data
+
+    return data
+
+
+# 餘額
+# https://mops.twse.com.tw/mops/web/t98sb05
+def balance(year, month):
+    data = {}
+
+    for t in ['sii', 'otc']:
+        r = requests.post("https://mops.twse.com.tw/mops/web/ajax_t98sb05", {
+            'encodeURIComponent': 1,
+            'firstin': True,
+            'step': 1,
+            'off': 1,
+            'TYPEK': t,
+            'year': year - 1911,
+            'month': "%02d" % month,
+        }, headers=HEADERS)
+        r.encoding = 'utf-8'
+
+        for index, value in pd.read_html(StringIO(r.text))[0].iterrows():
+            change = 0
+            balance = 0
+            change_stock = 0
+            balance_stock = 0
+
+            if type(value.iloc[1]) == str and value.iloc[1].isnumeric() == False:
+                continue
+
+            if np.isnan(value.iloc[2]) == False:
+                change = value.iloc[2]
+
+            if np.isnan(value.iloc[3]) == False:
+                balance = value.iloc[3]
+
+            if np.isnan(value.iloc[8]) == False:
+                change_stock = value.iloc[8]
+
+            if np.isnan(value.iloc[9]) == False:
+                balance_stock = value.iloc[9]
+
+            data[value.iloc[1]] = {
+                'code': value.iloc[1],
+                'change': change,
+                'balance': balance,
+                'change_stock': change_stock,
+                'balance_stock': balance_stock
+            }
 
     return data

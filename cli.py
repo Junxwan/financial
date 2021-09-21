@@ -998,9 +998,11 @@ def export(type, out, date, config):
 # 可轉債
 @cli.command('cb')
 @click.option('-t', '--type', type=click.STRING, help="類型")
+@click.option('-y', '--year', type=click.INT, help="年")
+@click.option('-m', '--month', type=click.INT, help="月")
 @click.option('-n', '--notify', default=False, type=click.BOOL, help="通知")
 @click.option('-c', '--config', type=click.STRING, help="config")
-def cbs(type, notify, config):
+def cbs(type, year, month, notify, config):
     d = db(file=config)
     session = Session(d)
 
@@ -1081,6 +1083,50 @@ def cbs(type, notify, config):
                     logging.info(f"update cb conversion price code: {code}")
 
                 session.commit()
+
+        if type == 'balance':
+            if year is None:
+                year = datetime.now().year
+
+            if month is None:
+                month = datetime.now().month
+
+            cbs = {v.code: v.id for v in session.execute("SELECT id, code FROM cbs").all()}
+
+            exist = {v.code: v.id for v in
+                     session.execute(
+                         "SELECT cbs.id, cbs.code FROM cb_balances join cbs on cb_balances.cb_id = cbs.id where year = :year and month = :month",
+                         {'year': year, 'month': month}
+                     ).all()}
+
+            balance = cb.balance(year, month)
+            diff = set(balance.keys()).difference(exist.keys())
+            insert = []
+
+            for code in diff:
+                if code not in cbs:
+                    continue
+
+                value = balance[code]
+
+                insert.append({
+                    'cb_id': cbs[code],
+                    'year': year,
+                    'month': month,
+                    'change': value['change'],
+                    'balance': value['balance'],
+                    'change_stock': value['change_stock'],
+                    'balance_stock': value['balance_stock'],
+                })
+
+            if len(insert) > 0:
+                result = session.execute(models.cbBalance.insert(), insert)
+                if result.is_insert == False or result.rowcount != len(insert):
+                    logging.error(f"save cb balance count: {len(insert)}")
+                    return False
+                else:
+                    logging.info(f"save cb balance count: {len(insert)}")
+                    session.commit()
 
         if notify:
             setEmail(f"系統通知 {type} 可轉債", "ok")
