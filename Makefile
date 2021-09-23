@@ -55,3 +55,7 @@ cb_balance:
 # 可賺債價格
 cb_price:
 		$(CLI) cb -t price -n $(NOTIFY)
+
+# 最近上市上櫃
+stock:
+    $(CLI) stock -n $(NOTIFY)

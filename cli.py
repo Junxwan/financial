@@ -1080,8 +1080,9 @@ def cbs(type, year, month, notify, config):
                 else:
                     logging.info(f"save cb conversion price code: {code} count: {len(insert)}")
 
-                result = session.execute("update cbs set conversion_price = :price where id = :id",
-                                         {'price': prices[0]['value'], 'id': id})
+                result = session.execute(
+                    "update cbs set conversion_price = :price, conversion_stock = :stock where id = :id",
+                    {'price': prices[0]['value'], 'stock': prices[0]['stock'], 'id': id})
 
                 if result.rowcount != 1:
                     logging.error(f"update cb conversion price code: {code}")
@@ -1134,7 +1135,7 @@ def cbs(type, year, month, notify, config):
             cbs = {v.code: v.id for v in session.execute("SELECT id, code FROM cbs").all()}
             for date, prices in cb.price(year, month).items():
                 insert = []
-                exist = session.execute("SELECT * FROM cb_prices where date = :date limit 1", {'date': date, }).first()
+                exist = session.execute("SELECT * FROM cb_prices where date = :date limit 1", {'date': date}).first()
 
                 if exist is not None:
                     continue
@@ -1175,6 +1176,58 @@ def cbs(type, year, month, notify, config):
     except Exception as e:
         if notify:
             setEmail(f"系統通知錯誤 {type} 可轉債", f"{e.__str__()}")
+
+
+# 最近上市上櫃
+@cli.command('stock')
+@click.option('-n', '--notify', default=False, type=click.BOOL, help="通知")
+@click.option('-c', '--config', type=click.STRING, help="config")
+def stock(notify, config):
+    d = db(file=config)
+    session = Session(d)
+    insert = []
+
+    try:
+        for value in twse.ipo():
+            stocks = session.execute("SELECT * FROM stocks where code = :code", {'code': value['code']}).first()
+
+            if stocks is not None:
+                continue
+
+            classification = session.execute("SELECT * FROM classifications where name = :name",
+                                             {'name': value['classification']}).first()
+
+            if classification is None:
+                continue
+
+            market = 1
+            if value['market'] == '上櫃':
+                market = 2
+
+            insert.append({
+                'code': value['code'],
+                'name': value['name'],
+                'classification_id': classification.id,
+                'market': market,
+            })
+
+        if len(insert) == 0:
+            return
+
+        result = session.execute(models.stock.insert(), insert)
+        if result.is_insert == False or result.rowcount != len(insert):
+            logging.error(f"save stock count:{len(insert)}")
+            return False
+        else:
+            logging.info(f"save stock count:{len(insert)}")
+            session.commit()
+
+        if notify:
+            setEmail(f"系統通知 最近上市上櫃個股", "ok")
+
+    except Exception as e:
+        if notify:
+            setEmail(f"系統通知錯誤 最近上市上櫃個股", f"{e.__str__()}")
 
 
 if __name__ == '__main__':

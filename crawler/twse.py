@@ -47,7 +47,8 @@ def month_revenue(year, month):
 
         time.sleep(6)
 
-    d = pd.DataFrame(revenue, columns=['code', 'name', '當月營收', '上月營收', '去年同期營收', 'qoq', 'yoy', '當月累積營收', '去年同期累積營收', '累積營收比較增減']).sort_values(
+    d = pd.DataFrame(revenue, columns=['code', 'name', '當月營收', '上月營收', '去年同期營收', 'qoq', 'yoy', '當月累積營收', '去年同期累積營收',
+                                       '累積營收比較增減']).sort_values(
         by=['code']
     )
 
@@ -832,3 +833,73 @@ def xq_industry(path, d: engine):
         # logging.info(f"{p} --- {len(insert)}")
 
     return True
+
+
+# 最近上市上櫃
+def ipo():
+    data = []
+
+    r = requests.get(
+        f"https://www.tpex.org.tw/web/regular_emerging/apply_schedule/latest/latest_listed_companies.php?l=zh-tw",
+        headers=HEADERS
+    )
+    r.encoding = 'utf-8'
+
+    date = datetime.datetime.now().strftime("%Y-%m-%d")
+
+    for index, value in pd.read_html(r.text)[0].iterrows():
+        dates = value['上櫃日期'].split('/')
+        dates[0] = str(int(dates[0]) + 1911)
+
+        if "-".join(dates) < date:
+            continue
+
+        data.append({
+            'code': value['股票代號'],
+            'name': value['公司名稱'],
+            'market': '上櫃',
+        })
+
+    r = requests.get(
+        f"https://www.twse.com.tw/company/newlisting?response=json&yy=&_={time.time() * 1000}",
+        headers=HEADERS
+    )
+
+    for value in r.json()['data']:
+        dates = value[9].split('.')
+        dates[0] = str(int(dates[0]) + 1911)
+
+        if "-".join(dates) < date:
+            continue
+
+        data.append({
+            'code': value[0],
+            'name': value[1],
+            'market': '上市',
+        })
+
+    for index, value in enumerate(data):
+        r = requests.post(
+            f"https://mops.twse.com.tw/mops/web/ajax_t05st03", {
+                'encodeURIComponent': 1,
+                'step': 1,
+                'firstin': 1,
+                'off': 1,
+                'keyword4': '',
+                'code1': '',
+                'TYPEK2': '',
+                'checkbtn': '',
+                'queryName': 'co_id',
+                'inpuType': 'co_id',
+                'TYPEK': 'all',
+                'co_id': value['code'],
+            },
+            headers=HEADERS
+        )
+        r.encoding = 'utf-8'
+
+        data[index]['classification'] = pd.read_html(r.text)[1][3][0].replace('工業', '').replace('業', '')
+
+        time.sleep(6)
+
+    return data
