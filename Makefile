@@ -58,4 +58,4 @@ cb_price:
 
 # 最近上市上櫃
 stock:
-    $(CLI) stock -n $(NOTIFY)
+		$(CLI) stock -n $(NOTIFY)
