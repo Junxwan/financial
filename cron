@@ -1,0 +1,17 @@
+# 工作日晚上6點
+0 10 * * 1-5 root make day
+
+# 工作日晚上6點30分 可轉債轉換價格
+30 10 * * 1-5 root make cb_conversion_price NOTIFY=true
+
+# 工作日晚上6點30分 可轉債餘額
+30 10 * * 1-5 root make cb_balance NOTIFY=true
+
+# 每月1-11號晚上6點 月營收
+0 10 1,2,3,4,5,6,7,8,9,10,11 * * root make month_revenue SAVE=true NOTIFY=true PATH=/var/www/data
+
+# 3,5,8,11月每日晚上6點 財報
+0 10 * 3,5,8,11 * root make financial SAVE=true NOTIFY=true PATH=/var/www/data
+
+# 每月10-16號晚上6點 爬投信持股
+0 10 10,11,12,13,14,15,16 * * root make fund SAVE=true NOTIFY=true PATH=/var/www/data
