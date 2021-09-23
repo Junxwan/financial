@@ -1032,13 +1032,14 @@ def cbs(type, year, month, notify, config):
                 logging.info(f"read cb info {code} {info['name']}")
                 time.sleep(6)
 
-            result = session.execute(models.cb.insert(), insert)
-            if result.is_insert == False or result.rowcount != len(insert):
-                logging.info("insert cb error")
-                return False
-            else:
-                logging.info(f"save cb {len(insert)} count")
-                session.commit()
+            if len(insert) > 0:
+                result = session.execute(models.cb.insert(), insert)
+                if result.is_insert == False or result.rowcount != len(insert):
+                    logging.info("insert cb error")
+                    return False
+                else:
+                    logging.info(f"save cb {len(insert)} count")
+                    session.commit()
 
         # 調整轉換價格
         if type == 'conversion_price':
