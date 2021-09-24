@@ -4,14 +4,7 @@ NOTIFY=false
 RESTART=false
 CLI=./venv/bin/python cli.py
 
-day:
-	make get_tse
-	make get_otc
-	make dividend
-	make tag_exponent
-	make stock NOTIFY=true
-	make cb_info NOTIFY=true
-	make cb_price NOTIFY=true
+day: get_tse get_otc dividend tag_exponent stock cb_info cb_price
 
 # 爬月營收
 month_revenue:
