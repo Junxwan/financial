@@ -1006,12 +1006,6 @@ def cbs(type, year, month, notify, config):
     d = db(file=config)
     session = Session(d)
 
-    if year is None:
-        year = datetime.now().year
-
-    if month is None:
-        month = datetime.now().month
-
     try:
         # 近期發行可轉債
         if type == 'info':
@@ -1094,6 +1088,16 @@ def cbs(type, year, month, notify, config):
 
         # 餘額
         if type == 'balance':
+            if month is None:
+                month = datetime.now().month - 1
+
+            if year is None:
+                year = datetime.now().year
+
+            if month == 0:
+                month = 12
+                year = year - 1
+
             cbs = {v.code: v.id for v in session.execute("SELECT id, code FROM cbs").all()}
 
             exist = {v.code: v.id for v in
@@ -1133,6 +1137,12 @@ def cbs(type, year, month, notify, config):
 
         # 價格
         if type == 'price':
+            if year is None:
+                year = datetime.now().year
+
+            if month is None:
+                month = datetime.now().month
+
             cbs = {v.code: v.id for v in session.execute("SELECT id, code FROM cbs").all()}
             for date, prices in cb.price(year, month).items():
                 insert = []
