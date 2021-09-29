@@ -998,13 +998,144 @@ def export(type, out, date, config):
 # 可轉債
 @cli.command('cb')
 @click.option('-t', '--type', type=click.STRING, help="類型")
+@click.option('-c', '--code', multiple=True, type=click.STRING, help="code")
 @click.option('-y', '--year', type=click.INT, help="年")
 @click.option('-m', '--month', type=click.INT, help="月")
+@click.option('-s', '--start_ym', type=click.INT, help="開始年月")
+@click.option('-e', '--end_ym', type=click.INT, help="結束年月")
 @click.option('-n', '--notify', default=False, type=click.BOOL, help="通知")
 @click.option('-c', '--config', type=click.STRING, help="config")
-def cbs(type, year, month, notify, config):
+def cbs(type, code, year, month, start_ym, end_ym, notify, config):
     d = db(file=config)
     session = Session(d)
+
+    def conversion_price(cbs):
+        for code, id in cbs.items():
+            insert = []
+            prices = cb.conversionPrice(code)
+            time.sleep(6)
+
+            value = session.execute("SELECT date FROM cb_conversion_prices WHERE cb_id = :id order by date desc",
+                                    {'id': id}).all()
+            diff = set([v['date'][0] for v in prices]).difference([v.date.__str__() for v in value])
+
+            for p in prices:
+                if p['date'][0] not in diff:
+                    continue
+
+                insert.append({
+                    'cb_id': id,
+                    'value': p['value'],
+                    'stock': p['stock'],
+                    'date': p['date'][0],
+                    'type': p['type'],
+                })
+
+            if len(insert) == 0:
+                logging.info(f"not save cb conversion price code: {code}")
+                continue
+
+            result = session.execute(models.cbConversionPrices.insert(), insert)
+            if result.is_insert == False or result.rowcount != len(insert):
+                logging.error(f"save cb conversion price code: {code} count: {len(insert)}")
+                return False
+            else:
+                logging.info(f"save cb conversion price code: {code} count: {len(insert)}")
+
+            result = session.execute(
+                "update cbs set conversion_price = :price, conversion_stock = :stock where id = :id",
+                {'price': prices[0]['value'], 'stock': prices[0]['stock'], 'id': id})
+
+            if result.rowcount != 1:
+                logging.error(f"update cb conversion price code: {code}")
+            else:
+                logging.info(f"update cb conversion price code: {code}")
+
+        return True
+
+    def balance(year, month, cbs):
+        exist = {v.code: v.id for v in
+                 session.execute(
+                     "SELECT cbs.id, cbs.code FROM cb_balances join cbs on cb_balances.cb_id = cbs.id where year = :year and month = :month",
+                     {'year': year, 'month': month}
+                 ).all()}
+
+        balance = cb.balance(year, month)
+        diff = set(balance.keys()).difference(exist.keys())
+        insert = []
+
+        for code in diff:
+            if code not in cbs:
+                continue
+
+            value = balance[code]
+
+            insert.append({
+                'cb_id': cbs[code],
+                'year': year,
+                'month': month,
+                'change': value['change'],
+                'balance': value['balance'],
+                'change_stock': value['change_stock'],
+                'balance_stock': value['balance_stock'],
+            })
+
+        if len(insert) > 0:
+            result = session.execute(models.cbBalance.insert(), insert)
+            if result.is_insert == False or result.rowcount != len(insert):
+                logging.error(f"save cb balance count: {len(insert)}")
+                return False
+            else:
+                logging.info(f"save cb balance count: {len(insert)}")
+
+        return True
+
+    def price(year, month, cbs):
+        exist = None
+        if len(cbs) == 1:
+            exist = {v.date.__str__(): True for v in session.execute("SELECT date FROM cb_prices where cb_id = :id",
+                                                                     {'id': list(cbs.values())[0]}).all()}
+        for date, prices in cb.price(year, month).items():
+            insert = []
+
+            if exist is None:
+                exist = session.execute("SELECT * FROM cb_prices where date = :date limit 1", {'date': date}).first()
+
+                if exist is not None:
+                    continue
+            elif date in exist:
+                continue
+
+            for price in prices:
+                if price['code'] not in cbs:
+                    continue
+
+                insert.append({
+                    'cb_id': cbs[price['code']],
+                    'year': year,
+                    'month': month,
+                    'date': price['date'],
+                    'open': price['open'],
+                    'close': price['close'],
+                    'high': price['high'],
+                    'low': price['low'],
+                    'volume': price['volume'],
+                    'increase': price['increase'],
+                    'amplitude': price['amplitude'],
+                    'amount': price['amount'],
+                })
+
+            if len(insert) == 0:
+                continue
+
+            result = session.execute(models.cbPrice.insert(), insert)
+            if result.is_insert == False or result.rowcount != len(insert):
+                logging.error(f"save cb price count: {len(insert)}")
+                return False
+            else:
+                logging.info(f"save cb price count: {len(insert)}")
+
+        return True
 
     try:
         # 近期發行可轉債
@@ -1029,7 +1160,7 @@ def cbs(type, year, month, notify, config):
             if len(insert) > 0:
                 result = session.execute(models.cb.insert(), insert)
                 if result.is_insert == False or result.rowcount != len(insert):
-                    logging.info("insert cb error")
+                    logging.error(f"save cb {len(insert)} count")
                     return False
                 else:
                     logging.info(f"save cb {len(insert)} count")
@@ -1043,47 +1174,7 @@ def cbs(type, year, month, notify, config):
                                        'date': datetime.now().strftime("%Y-%m-%d"),
                                    }).all()}
 
-            for code, id in cbs.items():
-                insert = []
-                prices = cb.conversionPrice(code)
-                time.sleep(6)
-
-                value = session.execute("SELECT date FROM cb_conversion_prices WHERE cb_id = :id order by date desc",
-                                        {'id': id}).all()
-                diff = set([v['date'][0] for v in prices]).difference([v.date.__str__() for v in value])
-
-                for p in prices:
-                    if p['date'][0] not in diff:
-                        continue
-
-                    insert.append({
-                        'cb_id': id,
-                        'value': p['value'],
-                        'stock': p['stock'],
-                        'date': p['date'][0],
-                        'type': p['type'],
-                    })
-
-                if len(insert) == 0:
-                    logging.info(f"not save cb conversion price code: {code}")
-                    continue
-
-                result = session.execute(models.cbConversionPrices.insert(), insert)
-                if result.is_insert == False or result.rowcount != len(insert):
-                    logging.error(f"save cb conversion price code: {code} count: {len(insert)}")
-                    return False
-                else:
-                    logging.info(f"save cb conversion price code: {code} count: {len(insert)}")
-
-                result = session.execute(
-                    "update cbs set conversion_price = :price, conversion_stock = :stock where id = :id",
-                    {'price': prices[0]['value'], 'stock': prices[0]['stock'], 'id': id})
-
-                if result.rowcount != 1:
-                    logging.error(f"update cb conversion price code: {code}")
-                else:
-                    logging.info(f"update cb conversion price code: {code}")
-
+            if conversion_price(cbs):
                 session.commit()
 
         # 餘額
@@ -1098,42 +1189,8 @@ def cbs(type, year, month, notify, config):
                 month = 12
                 year = year - 1
 
-            cbs = {v.code: v.id for v in session.execute("SELECT id, code FROM cbs").all()}
-
-            exist = {v.code: v.id for v in
-                     session.execute(
-                         "SELECT cbs.id, cbs.code FROM cb_balances join cbs on cb_balances.cb_id = cbs.id where year = :year and month = :month",
-                         {'year': year, 'month': month}
-                     ).all()}
-
-            balance = cb.balance(year, month)
-            diff = set(balance.keys()).difference(exist.keys())
-            insert = []
-
-            for code in diff:
-                if code not in cbs:
-                    continue
-
-                value = balance[code]
-
-                insert.append({
-                    'cb_id': cbs[code],
-                    'year': year,
-                    'month': month,
-                    'change': value['change'],
-                    'balance': value['balance'],
-                    'change_stock': value['change_stock'],
-                    'balance_stock': value['balance_stock'],
-                })
-
-            if len(insert) > 0:
-                result = session.execute(models.cbBalance.insert(), insert)
-                if result.is_insert == False or result.rowcount != len(insert):
-                    logging.error(f"save cb balance count: {len(insert)}")
-                    return False
-                else:
-                    logging.info(f"save cb balance count: {len(insert)}")
-                    session.commit()
+            if balance(year, month, {v.code: v.id for v in session.execute("SELECT id, code FROM cbs").all()}):
+                session.commit()
 
         # 價格
         if type == 'price':
@@ -1143,43 +1200,45 @@ def cbs(type, year, month, notify, config):
             if month is None:
                 month = datetime.now().month
 
-            cbs = {v.code: v.id for v in session.execute("SELECT id, code FROM cbs").all()}
-            for date, prices in cb.price(year, month).items():
-                insert = []
-                exist = session.execute("SELECT * FROM cb_prices where date = :date limit 1", {'date': date}).first()
+            if price(year, month, {v.code: v.id for v in session.execute("SELECT id, code FROM cbs").all()}):
+                session.commit()
 
-                if exist is not None:
-                    continue
+        if type == 'get':
+            my = start_ym.replace("-", "")
 
-                for price in prices:
-                    if price['code'] not in cbs:
-                        continue
+            info = cb.findByUrl(
+                f"https://mops.twse.com.tw/mops/web/t120sg01?TYPEK=&bond_id={code}&bond_kind=5&bond_subn=%24M00000001&bond_yrn={code[-1]}&come=2&encodeURIComponent=1&firstin=ture&issuer_stock_code={code[:-1]}&monyr_reg={my}&pg=&step=0&tg="
+            )
 
-                    insert.append({
-                        'cb_id': cbs[price['code']],
-                        'year': year,
-                        'month': month,
-                        'date': price['date'],
-                        'open': price['open'],
-                        'close': price['close'],
-                        'high': price['high'],
-                        'low': price['low'],
-                        'volume': price['volume'],
-                        'increase': price['increase'],
-                        'amplitude': price['amplitude'],
-                        'amount': price['amount'],
-                    })
+            if info is None:
+                return
 
-                if len(insert) == 0:
-                    continue
+            info['stock_id'] = session.execute("SELECT id FROM stocks where code = :code",
+                                               {'code': code[:-1]}).first().id
+            result = session.execute(models.cb.insert(), [info])
+            if result.is_insert == False or result.rowcount != 1:
+                logging.error(f"save cb {code}")
+                return False
+            else:
+                logging.info(f"save cb {code}")
 
-                result = session.execute(models.cbPrice.insert(), insert)
-                if result.is_insert == False or result.rowcount != len(insert):
-                    logging.error(f"save cb price count: {len(insert)}")
-                    return False
-                else:
-                    logging.info(f"save cb price count: {len(insert)}")
-                    session.commit()
+            cbs = {code: result.inserted_primary_key[0]}
+
+            if conversion_price(cbs) == False:
+                return
+
+            year = int(start_ym.split('-')[0])
+            for i in range(int(end_ym.split('-')[0]) - year):
+                for m in range(12):
+                    if price(year + i, m + 1, cbs) == False:
+                        return
+
+                    time.sleep(3)
+
+                    if balance(year + i, m + 1, cbs) == False:
+                        return
+
+            session.commit()
 
         if notify:
             setEmail(f"系統通知 {type} 可轉債", "ok")

@@ -121,6 +121,7 @@ def findByUrl(url):
         'end_conversion_date': "-".join(endConversionDate),
         'conversion_premium_rate': float(trs[26].contents[2].text.replace('轉換溢價率：', '').replace('%', '')),
         'coupon_rate': float(trs[25].contents[0].text.replace('票面利率：', '').replace('%', '')),
+        'conversion_stock': 0,
         'market': market[trs[5].contents[0].text.replace('債券掛牌情形：', '')],
         'is_collateral': trs[30].contents[0].text.replace('擔保情形：', '').split('，')[0] == '有',
         'url': url,
@@ -251,7 +252,7 @@ def price(year, month):
 
         for index, value in pd.read_csv(StringIO('\r\n'.join(r.text.split('\r\n')[3:])),
                                         encoding='big5-hkscs').iterrows():
-            if type(value['代號']) != str or value['交易'] == '議價':
+            if type(value['代號']) != str or value['交易'] == '議價' or value['代號'] == '合計':
                 continue
 
             if np.isnan(value['開市']):
