@@ -64,4 +64,4 @@ stock:
 
 # Line新聞
 line_new:
-        $(CLI) line-news -n $(NOTIFY)
+		$(CLI) line-news -n $(NOTIFY)
