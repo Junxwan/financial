@@ -3,13 +3,17 @@ bs4==0.0.1
 cchardet==2.1.7
 certifi==2020.12.5
 chardet==4.0.0
+charset-normalizer==2.0.6
 click==7.1.2
+colorama==0.4.4
 eml-parser==1.14.6
 et-xmlfile==1.1.0
 feedparser==6.0.2
+future==0.18.2
 greenlet==1.0.0
 idna==2.10
 Jinja2==2.11.3
+line-bot-sdk==1.20.0
 lxml==4.6.3
 MarkupSafe==1.1.1
 numpy==1.20.2
