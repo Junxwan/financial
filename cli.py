@@ -4,6 +4,7 @@ import time
 import glob
 import logging
 import smtplib
+import pytz
 import calendar
 import pymysql
 import eml_parser
@@ -15,6 +16,8 @@ import crawler.news as cnews
 import crawler.fund as cFund
 import crawler.cb as cb
 import pandas as pd
+from linebot import LineBotApi
+from linebot.models import TextMessage
 from bs4 import BeautifulSoup
 from models import models
 from sqlalchemy.orm import Session
@@ -742,41 +745,41 @@ def get_fund(year, month, id, out, save, config, notify):
 @cli.command('news')
 @click.option('-e', '--email', type=click.STRING, help="email")
 @click.option('-h', '--hours', type=click.INT, help="小時")
-@click.option('-l', '--login_email', type=click.STRING, help="發送者")
-@click.option('-p', '--login_pwd', type=click.STRING, help="發送密碼")
 @click.option('-s', '--save', type=click.BOOL, help="是否保存在db")
-def news(email, hours, login_email, login_pwd, save=False):
+def news(email, hours, save=False):
     log('start news')
 
-    date = (datetime.now() - timedelta(hours=hours)).strftime("%Y-%m-%d %H:%M:%S")
+    tz = pytz.timezone('Asia/Taipei')
+    now = datetime.now(tz)
+    date = (now - timedelta(hours=hours)).strftime("%Y-%m-%d %H:%M:%S")
 
     data = [
-        ['聯合報-產經', cnews.udn('6644', date)],
-        ['聯合報-股市', cnews.udn('6645', date)],
-        ['中時', cnews.chinatimes(date)],
-        ['中時-財經要聞', cnews.chinatimes_newspapers(date)],
-        ['科技新報', cnews.technews(date)],
-        ['經濟日報-產業熱點', cnews.money_udn('5591', '5612', date)],
-        ['經濟日報-生技醫藥', cnews.money_udn('5591', '10161', date)],
-        ['經濟日報-企業CEO', cnews.money_udn('5591', '5649', date)],
-        ['經濟日報-總經趨勢', cnews.money_udn('10846', '10869', date)],
-        ['經濟日報-2021投資前瞻', cnews.money_udn('10846', '121887', date)],
-        ['經濟日報-國際焦點', cnews.money_udn('5588', '5599', date)],
-        ['經濟日報-美中貿易戰', cnews.money_udn('5588', '10511', date)],
-        ['經濟日報-金融脈動', cnews.money_udn('12017', '5613', date)],
-        ['經濟日報-市場焦點', cnews.money_udn('5590', '5607', date)],
-        ['經濟日報-集中市場', cnews.money_udn('5590', '5710', date)],
-        ['經濟日報-櫃買市場', cnews.money_udn('5590', '11074', date)],
-        ['經濟日報-國際期貨', cnews.money_udn('11111', '11114', date)],
-        ['經濟日報-國際綜合', cnews.money_udn('12925', '121854', date)],
-        ['經濟日報-外媒解析', cnews.money_udn('12925', '12937', date)],
-        ['經濟日報-產業動態', cnews.money_udn('12925', '121852', date)],
-        ['經濟日報-產業分析', cnews.money_udn('12925', '12989', date)],
-        ['經濟日報-證卷', cnews.money_udn_stock(date)],
-        ['工商時報-產業', cnews.ctee(date, 'industry')],
-        ['工商時報-科技', cnews.ctee(date, 'tech')],
-        ['工商時報-國際', cnews.ctee(date, 'global')],
-        ['工商時報-兩岸', cnews.ctee(date, 'china')],
+        ['聯合報-產經', news.udn('6644', date)],
+        ['聯合報-股市', news.udn('6645', date)],
+        ['蘋果-財經地產', news.appledaily(date)],
+        ['中時', news.chinatimes(date)],
+        ['中時-財經要聞', news.chinatimes_newspapers(date)],
+        ['科技新報', news.technews(date)],
+        ['經濟日報-產業熱點', news.money_udn('5591', '5612', date)],
+        ['經濟日報-生技醫藥', news.money_udn('5591', '10161', date)],
+        ['經濟日報-企業CEO', news.money_udn('5591', '5649', date)],
+        ['經濟日報-總經趨勢', news.money_udn('10846', '10869', date)],
+        ['經濟日報-2021投資前瞻', news.money_udn('10846', '121887', date)],
+        ['經濟日報-國際焦點', news.money_udn('5588', '5599', date)],
+        ['經濟日報-美中貿易戰', news.money_udn('5588', '10511', date)],
+        ['經濟日報-金融脈動', news.money_udn('12017', '5613', date)],
+        ['經濟日報-市場焦點', news.money_udn('5590', '5607', date)],
+        ['經濟日報-集中市場', news.money_udn('5590', '5710', date)],
+        ['經濟日報-櫃買市場', news.money_udn('5590', '11074', date)],
+        ['經濟日報-國際期貨', news.money_udn('11111', '11114', date)],
+        ['經濟日報-國際綜合', news.money_udn('12925', '121854', date)],
+        ['經濟日報-外媒解析', news.money_udn('12925', '12937', date)],
+        ['經濟日報-產業動態', news.money_udn('12925', '121852', date)],
+        ['經濟日報-產業分析', news.money_udn('12925', '12989', date)],
+        ['工商時報-產業', news.ctee(date, 'industry')],
+        ['工商時報-科技', news.ctee(date, 'tech')],
+        ['工商時報-國際', news.ctee(date, 'global')],
+        ['工商時報-兩岸', news.ctee(date, 'china')],
         ['鉅亨網-台股', cnews.cnyes(date, 'tw_stock')],
         ['鉅亨網-國際股', cnews.cnyes(date, 'wd_stock')],
         ['自由時報-國際財經', cnews.ltn(date, 'international')],
@@ -789,7 +792,6 @@ def news(email, hours, login_email, login_pwd, save=False):
         ['trendforce', cnews.trendforce(date)],
         ['dramx', cnews.dramx(date)],
         ['digitimes-報導總欄', cnews.digitimes(date)],
-        ['證交所-即時重大訊息', twse.news(date)],
     ]
 
     log('get news ok')
@@ -823,32 +825,57 @@ def news(email, hours, login_email, login_pwd, save=False):
         else:
             session.commit()
 
-    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    if email is not None:
+        now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-    html = render('email.html',
-                  news=[{'title': v[0], 'news': v[1]} for v in data],
-                  date=now,
-                  end_date=date,
-                  )
+        html = render('email.html',
+                      news=[{'title': v[0], 'news': v[1]} for v in data],
+                      date=now,
+                      end_date=date,
+                      )
 
-    content = MIMEMultipart()
-    content["from"] = "bot.junx@gmail.com"
-    content["subject"] = f"財經新聞-{now}"
-    content["to"] = email
-    content.attach(MIMEText(html, 'html'))
+        content = MIMEMultipart()
+        content["from"] = conf['smtp']['login_email']
+        content["subject"] = f"財經新聞-{now}"
+        content["to"] = email
+        content.attach(MIMEText(html, 'html'))
 
-    log(f"login email: {login_email}")
-    log(f"send email: {email}")
+        log(f"login email: {conf['smtp']['login_email']}")
+        log(f"send email: {email}")
 
-    with smtplib.SMTP(host="smtp.gmail.com", port="587") as smtp:
-        try:
-            smtp.ehlo()  # 驗證SMTP伺服器
-            smtp.starttls()  # 建立加密傳輸
-            smtp.login(login_email, login_pwd)
-            smtp.send_message(content)
-            log('set news email ok')
-        except Exception as e:
-            error(f"set news email error {e.__str__()}")
+        with smtplib.SMTP(host="smtp.gmail.com", port="587") as smtp:
+            try:
+                smtp.ehlo()  # 驗證SMTP伺服器
+                smtp.starttls()  # 建立加密傳輸
+                smtp.login(conf['smtp']['login_email'], conf['smtp']['password'])
+                smtp.send_message(content)
+                log('set news email ok')
+            except Exception as e:
+                error(f"set news email error {e.__str__()}")
+
+
+# 即時重大公告
+@cli.command('line-news')
+@click.option('-n', '--notify', default=False, type=click.BOOL, help="通知")
+def lineNews(notify):
+    try:
+        lineApi = LineBotApi(conf['line']['token'])
+
+        data = [
+            twse.news({
+                '發行可轉債': ['決議發行', '轉換公司債'],
+                '準備定價': ['轉換公司債', '代收價款行庫'],
+            })
+        ]
+
+        for news in data:
+            for v in news:
+                lineApi.push_message(conf['line']['to'], TextMessage(text=v['text']))
+    except Exception as e:
+        error(f"line-news error {e.__str__()}")
+
+        if notify:
+            setEmail(f"系統通知錯誤 Line新聞通知", f"{e.__str__()}")
 
 
 # 新聞
@@ -1239,9 +1266,6 @@ def cbs(type, code, year, month, start_ym, end_ym, notify, config):
                         return
 
             session.commit()
-
-        if notify:
-            setEmail(f"系統通知 {type} 可轉債", "ok")
 
     except Exception as e:
         if notify:

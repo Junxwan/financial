@@ -356,7 +356,7 @@ def season_codes(year, season):
 
 
 # 即時重大訊息 https://mops.twse.com.tw/mops/web/t05sr01_1
-def news(end_date):
+def news(keys: dict):
     news = []
     r = requests.get(
         "https://mops.twse.com.tw/mops/web/t05sr01_1",
@@ -371,26 +371,37 @@ def news(end_date):
     if data is None:
         return news
 
+    news = []
+    end_date = datetime.datetime.now().strftime("%Y-%m-%d %H:00:00")
+
     for v in data.findAll("tr")[1:]:
         v = v.findAll("td")
         date = f"{int(v[2].text[:3]) + 1911}-{v[2].text[4:6]}-{v[2].text[7:9]} {v[3].text}"
 
-        if date <= end_date:
-            break
+        if date < end_date:
+            continue
 
-        key = ['財務', '處分', '股利', '減資', '增資', '不動產', '辭任', '自結', '澄清']
-        msg = v[4].text
+        code = v[0].text
+        name = v[1].text
+        content = v[4].text
 
-        if any(x in msg for x in key):
-            title = '<font color="#9818BE">' + v[1].text + '</font>' + v[4].text
-        else:
-            title = f"{v[1].text} - {v[4].text}"
+        for n, k in keys.items():
+            ok = True
 
-        news.append({
-            "title": title,
-            "url": "",
-            "date": date,
-        })
+            for v in k:
+                if content.find(v) < 0:
+                    ok = False
+                    break
+
+            if ok:
+                news.append({
+                    'code': code,
+                    'name': name,
+                    'date': date,
+                    'content': content,
+                    'type': n,
+                    'text': f"代碼: {code}\n名稱: {name}\n 時間: {date}\n 種類: {n}\n\n{content}",
+                })
 
     return news
 

@@ -61,3 +61,7 @@ cb_price:
 # 最近上市上櫃
 stock:
 		$(CLI) stock -n $(NOTIFY)
+
+# Line新聞
+line_new:
+        $(CLI) line-news -n $(NOTIFY)
