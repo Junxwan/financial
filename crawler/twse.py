@@ -4,6 +4,7 @@ import datetime
 import requests
 import time
 import logging
+import pytz
 import pandas as pd
 from io import StringIO
 from models import models
@@ -372,7 +373,8 @@ def news(keys: dict):
         return news
 
     news = []
-    end_date = datetime.datetime.now().strftime("%Y-%m-%d %H:00:00")
+    tz = pytz.timezone('Asia/Taipei')
+    end_date = datetime.datetime.now(tz).strftime("%Y-%m-%d %H:00:00")
 
     for v in data.findAll("tr")[1:]:
         v = v.findAll("td")
