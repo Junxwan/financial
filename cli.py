@@ -268,7 +268,8 @@ def month_revenue(year, month, outpath, save, config, notify):
         log(f"save month_revenue {year}-{m} csv")
 
         if notify:
-            setEmail(f"系統通知-{year}-{m}月營收", 'ok')
+            lineApi = LineBotApi(conf['line']['token'])
+            lineApi.push_message(conf['line']['to'], TextMessage(text=f"系統通知-{year}-{m}月營收"))
 
     except Exception as e:
         error(f"month_revenue error: {e.__str__()}")
@@ -732,7 +733,8 @@ def get_fund(year, month, id, out, save, config, notify):
 
         if isSave and notify:
             t = "-".join(list(funds))
-            setEmail(f"系統通知-{t} 投信持股明細", 'ok')
+            lineApi = LineBotApi(conf['line']['token'])
+            lineApi.push_message(conf['line']['to'], TextMessage(text=f"系統通知-{t} 投信持股明細"))
 
     except Exception as e:
         error(f"fund error {e.__str__()}")
@@ -858,14 +860,15 @@ def news(email, hours, save=False):
 @cli.command('line-news')
 @click.option('-n', '--notify', default=False, type=click.BOOL, help="通知")
 def lineNews(notify):
+    d = db()
+
     try:
         lineApi = LineBotApi(conf['line']['token'])
 
+        keys = {v.name: v.ks.split(',') for v in d.execute('SELECT name, `keys` as ks FROM news_key_words').all()}
+
         data = [
-            twse.news({
-                '發行可轉債': ['決議發行', '轉換公司債'],
-                '準備定價': ['轉換公司債', '代收價款行庫'],
-            })
+            twse.news(keys)
         ]
 
         for news in data:
@@ -1315,9 +1318,6 @@ def stock(notify, config):
         else:
             logging.info(f"save stock count:{len(insert)}")
             session.commit()
-
-        if notify:
-            setEmail(f"系統通知 最近上市上櫃個股", "ok")
 
     except Exception as e:
         if notify:

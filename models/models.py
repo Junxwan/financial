@@ -257,3 +257,9 @@ cbPrice = Table('cb_prices', metadata,
                 Column('volume', BigInteger),
                 Column('amount', BigInteger),
                 )
+
+newsKeyWord = Table('news_key_words', metadata,
+                Column('id', Integer, primary_key=True),
+                Column('name', String(50)),
+                Column('keys', String(255))
+                )
