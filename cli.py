@@ -1132,6 +1132,7 @@ def cbs(type, code, year, month, start_ym, end_ym, notify, config):
                 exist = session.execute("SELECT * FROM cb_prices where date = :date limit 1", {'date': date}).first()
 
                 if exist is not None:
+                    exist = None
                     continue
             elif date in exist:
                 continue
