@@ -1364,7 +1364,7 @@ def line(config):
     ).all()
 
     for v in conversionPrice:
-        message.append(f"代碼:{v.code}\n名稱:{v.name}\n日期:{v.date}\n價格:{v.value}")
+        message.append(f"代碼: {v.code}\n名稱: {v.name}\n日期: {v.date}\n 調整轉換價: {v.value}")
 
     # cb上市第六天
     cbs = session.execute(
@@ -1373,25 +1373,27 @@ def line(config):
             'start_date': date,
             'end_date': (datetime.now() + timedelta(days=10)).strftime(f"%Y-%m-%d"),
         }
-    )
+    ).all()
 
     prices = session.execute("SELECT cb_id, count(1) as count FROM cb_prices WHERE cb_id IN :ids GROUP BY cb_id", {
         'ids': [v.id for v in cbs]
     }).all()
 
-    prices = session.execute("SELECT cb_id, date, volume FROM cb_prices WHERE cb_id IN :ids AND date = :date", {
-        'ids': [v.cb_id for v in prices if v.count == 6],
-        'date': date,
-    }).all()
+    ids = [v.cb_id for v in prices if v.count == 6]
+    if len(ids) > 0:
+        prices = session.execute("SELECT cb_id, date, volume FROM cb_prices WHERE cb_id IN :ids AND date = :date", {
+            'ids': [v.cb_id for v in prices if v.count == 6],
+            'date': date,
+        }).all()
 
-    for v in prices:
-        for c in cbs:
-            if v.cb_id != c.id:
-                continue
+        for v in prices:
+            for c in cbs:
+                if v.cb_id != c.id:
+                    continue
 
-            message.append(
-                f"代碼:{c.code}\n名稱:{c.name}\n日期:{v.date}\n預估cbas拆解:{round((v.volume / (c.publish_total_amount / 100000)) * 100)}%"
-            )
+                message.append(
+                    f"代碼:{c.code}\n名稱:{c.name}\n日期:{v.date}\n預估cbas拆解:{round((v.volume / (c.publish_total_amount / 100000)) * 100)}%"
+                )
 
     for m in message:
         lineApi.push_message(conf['line']['to'], TextMessage(text=m))
