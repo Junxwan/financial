@@ -269,7 +269,7 @@ def month_revenue(year, month, outpath, save, config, notify):
 
         if notify:
             lineApi = LineBotApi(conf['line']['token'])
-            lineApi.push_message(conf['line']['to'], TextMessage(text=f"系統通知-{year}-{m}月營收"))
+            lineApi.push_message(conf['line']['to'], TextMessage(text=f"執行收集{year}-{m}月營收完成"))
 
     except Exception as e:
         error(f"month_revenue error: {e.__str__()}")
@@ -296,23 +296,31 @@ def get_financial(year, season, outpath, type, save, config, notify):
         if datetime.now().month < 4:
             year = year - 1
 
-    if type == 'all':
-        FINANCIAL_TYPE.remove('all')
+    try:
+        if type == 'all':
+            FINANCIAL_TYPE.remove('all')
 
-        for t in FINANCIAL_TYPE:
-            result += _get_financial(year, season, outpath, t)
-    else:
-        result = _get_financial(year, season, outpath, type)
+            for t in FINANCIAL_TYPE:
+                result += _get_financial(year, season, outpath, t)
+        else:
+            result = _get_financial(year, season, outpath, type)
 
-    if save:
-        financial.imports('financial', year, quarterly=season, dir=outpath, d=db(file=config))
+        if save:
+            financial.imports('financial', year, quarterly=season, dir=outpath, d=db(file=config))
 
-    if notify and len(result) > 0:
-        s = ''
-        for v in list(result):
-            s += v.__str__() + '\n'
+        if notify and len(result) > 0:
+            s = ''
+            for v in list(result):
+                s += v.__str__() + '\n'
 
-        setEmail(f"系統通知-財報", s)
+            if notify:
+                lineApi = LineBotApi(conf['line']['token'])
+                lineApi.push_message(conf['line']['to'], TextMessage(text=f"執行收集季報\n\n{s}"))
+    except Exception as e:
+        error(f"季報 error: {e.__str__()}")
+
+        if notify:
+            setEmail(f"系統通知錯誤-季報", f"{e.__str__()}")
 
 
 # 股利
@@ -734,7 +742,7 @@ def get_fund(year, month, id, out, save, config, notify):
         if isSave and notify:
             t = "-".join(list(funds))
             lineApi = LineBotApi(conf['line']['token'])
-            lineApi.push_message(conf['line']['to'], TextMessage(text=f"系統通知-{t} 投信持股明細"))
+            lineApi.push_message(conf['line']['to'], TextMessage(text=f"執行收集-{t} 投信持股明細"))
 
     except Exception as e:
         error(f"fund error {e.__str__()}")
@@ -1271,7 +1279,13 @@ def cbs(type, code, year, month, start_ym, end_ym, notify, config):
 
             session.commit()
 
+        if notify:
+            lineApi = LineBotApi(conf['line']['token'])
+            lineApi.push_message(conf['line']['to'], TextMessage(text=f"執行收集可轉債 {type}"))
+
     except Exception as e:
+        error(f"cb {type} error {e.__str__()}")
+
         if notify:
             setEmail(f"系統通知錯誤 {type} 可轉債", f"{e.__str__()}")
 
@@ -1320,9 +1334,67 @@ def stock(notify, config):
             logging.info(f"save stock count:{len(insert)}")
             session.commit()
 
+            if notify:
+                lineApi = LineBotApi(conf['line']['token'])
+                lineApi.push_message(conf['line']['to'], TextMessage(text=f"執行收集最近上市上櫃"))
+
     except Exception as e:
+        error(f"stock error {e.__str__()}")
+
         if notify:
             setEmail(f"系統通知錯誤 最近上市上櫃個股", f"{e.__str__()}")
+
+
+# line通知
+@cli.command('line')
+@click.option('-c', '--config', type=click.STRING, help="config")
+def line(config):
+    date = datetime.now().strftime(f"%Y-%m-%d")
+    d = db(file=config)
+    session = Session(d)
+    lineApi = LineBotApi(conf['line']['token'])
+    message = []
+
+    # 接近cb調整轉換價
+    conversionPrice = session.execute(
+        ("SELECT cbs.code, cbs.name, cb_conversion_prices.date, cb_conversion_prices.value FROM cb_conversion_prices "
+         "JOIN cbs on cbs.id = cb_conversion_prices.cb_id "
+         "WHERE cb_conversion_prices.date = :date"),
+        {'date': (datetime.now() + timedelta(days=7)).strftime(f"%Y-%m-%d")}
+    ).all()
+
+    for v in conversionPrice:
+        message.append(f"代碼:{v.code}\n名稱:{v.name}\n日期:{v.date}\n價格:{v.value}")
+
+    # cb上市第六天
+    cbs = session.execute(
+        "SELECT id, code, name, publish_total_amount FROM cbs WHERE start_date between :start_date AND :end_date ",
+        {
+            'start_date': date,
+            'end_date': (datetime.now() + timedelta(days=10)).strftime(f"%Y-%m-%d"),
+        }
+    )
+
+    prices = session.execute("SELECT cb_id, count(1) as count FROM cb_prices WHERE cb_id IN :ids GROUP BY cb_id", {
+        'ids': [v.id for v in cbs]
+    }).all()
+
+    prices = session.execute("SELECT cb_id, date, volume FROM cb_prices WHERE cb_id IN :ids AND date = :date", {
+        'ids': [v.cb_id for v in prices if v.count == 6],
+        'date': date,
+    }).all()
+
+    for v in prices:
+        for c in cbs:
+            if v.cb_id != c.id:
+                continue
+
+            message.append(
+                f"代碼:{c.code}\n名稱:{c.name}\n日期:{v.date}\n預估cbas拆解:{round((v.volume / (c.publish_total_amount / 100000)) * 100)}%"
+            )
+
+    for m in message:
+        lineApi.push_message(conf['line']['to'], TextMessage(text=m))
 
 
 if __name__ == '__main__':

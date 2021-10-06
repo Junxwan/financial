@@ -374,7 +374,7 @@ def news(keys: dict):
 
     news = []
     tz = pytz.timezone('Asia/Taipei')
-    end_date = datetime.datetime.now(tz).strftime("%Y-%m-%d %H:00:00")
+    end_date = (datetime.datetime.now(tz) - datetime.timedelta(hours=1)).strftime("%Y-%m-%d %H:%M:%S")
 
     for v in data.findAll("tr")[1:]:
         v = v.findAll("td")
