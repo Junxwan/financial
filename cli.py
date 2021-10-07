@@ -870,6 +870,8 @@ def news(email, hours, save=False):
 def lineNews(notify):
     d = db()
 
+    log('line news')
+
     try:
         lineApi = LineBotApi(conf['line']['token'])
 
