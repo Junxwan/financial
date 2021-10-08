@@ -482,7 +482,8 @@ def price(type, path, config):
 @click.option('-t', '--code', multiple=True, type=click.STRING, help="code")
 @click.option('-r', '--restart', default=False, type=click.BOOL, help="重置")
 @click.option('-c', '--config', type=click.STRING, help="config")
-def tag_exponent(code, restart, config):
+@click.option('-n', '--notify', default=False, type=click.BOOL, help="通知")
+def tag_exponent(code, restart, config, notify):
     session = Session(db(file=config))
     tags = []
 
@@ -638,10 +639,15 @@ def tag_exponent(code, restart, config):
                         f"save exponent tag:{stock.tag_id} name:{stock.name} stock:{stock.stock_id} count:{len(insert)}")
                     session.commit()
 
+                    lineApi.sendSystem("執行產業指數")
+
         except Exception as e:
             logging.error(
                 f"tag exponent tag:{stock.tag_id} name:{stock.name} stock:{stock.stock_id} error: {e.__str__()}"
             )
+
+            if notify:
+                setEmail("系統錯誤-產業指數", {e.__str__()})
 
 
 # 面板報價

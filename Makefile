@@ -20,7 +20,7 @@ fund:
 
 # 建立產業指數價格
 tag_exponent:
-		$(CLI) tag_exponent -r $(RESTART)
+		$(CLI) tag_exponent -r $(RESTART) -n $(NOTIFY)
 
 # 爬大盤價格
 get_tse:
