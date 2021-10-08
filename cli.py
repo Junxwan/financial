@@ -639,7 +639,7 @@ def tag_exponent(code, restart, config, notify):
                         f"save exponent tag:{stock.tag_id} name:{stock.name} stock:{stock.stock_id} count:{len(insert)}")
                     session.commit()
 
-                    lineApi.sendSystem("執行產業指數")
+                    # lineApi.sendSystem("執行產業指數")
 
         except Exception as e:
             logging.error(
@@ -1283,8 +1283,8 @@ def cbs(type, code, year, month, start_ym, end_ym, notify, config):
 
             session.commit()
 
-        if notify:
-            lineApi.sendSystem(f"執行收集可轉債 {type}")
+        # if notify:
+        #     lineApi.sendSystem(f"執行收集可轉債 {type}")
 
     except Exception as e:
         error(f"cb {type} error {e.__str__()}")
@@ -1340,9 +1340,9 @@ def stock(notify, config):
             logging.info(f"save stock count:{len(insert)}")
             session.commit()
 
-            if notify:
-                s = ",".join(names)
-                lineApi.sendSystem(f"最近上市上櫃: {s}")
+            # if notify:
+            #     s = ",".join(names)
+            #     lineApi.sendSystem(f"最近上市上櫃: {s}")
 
     except Exception as e:
         error(f"stock error {e.__str__()}")
