@@ -16,8 +16,7 @@ import crawler.news as cnews
 import crawler.fund as cFund
 import crawler.cb as cb
 import pandas as pd
-from linebot import LineBotApi
-from linebot.models import TextMessage
+from api import line
 from bs4 import BeautifulSoup
 from models import models
 from sqlalchemy.orm import Session
@@ -67,6 +66,8 @@ else:
 
 conf = ConfigParser()
 conf.read('config.ini')
+
+lineApi = line.Api(conf['line']['token'])
 
 
 def log(msg):
@@ -268,8 +269,7 @@ def month_revenue(year, month, outpath, save, config, notify):
         log(f"save month_revenue {year}-{m} csv")
 
         if notify:
-            lineApi = LineBotApi(conf['line']['token'])
-            lineApi.push_message(conf['line']['to'], TextMessage(text=f"執行收集{year}-{m}月營收完成"))
+            lineApi.sendMonthRevenue(f"收集 {m} 月營收完成")
 
     except Exception as e:
         error(f"month_revenue error: {e.__str__()}")
@@ -314,8 +314,7 @@ def get_financial(year, season, outpath, type, save, config, notify):
                 s += v.__str__() + '\n'
 
             if notify:
-                lineApi = LineBotApi(conf['line']['token'])
-                lineApi.push_message(conf['line']['to'], TextMessage(text=f"執行收集季報\n\n{s}"))
+                lineApi.sendFinancial(f"收集 {result[0]['date']} 季報完成")
     except Exception as e:
         error(f"季報 error: {e.__str__()}")
 
@@ -740,9 +739,7 @@ def get_fund(year, month, id, out, save, config, notify):
                 fund.imports(int(ym[:4]), int(ym[4:]), out, db(file=config))
 
         if isSave and notify:
-            t = "-".join(list(funds))
-            lineApi = LineBotApi(conf['line']['token'])
-            lineApi.push_message(conf['line']['to'], TextMessage(text=f"執行收集-{t} 投信持股明細"))
+            lineApi.sendFund(f"執行收集 {year}-{month} 投信持股明細")
 
     except Exception as e:
         error(f"fund error {e.__str__()}")
@@ -873,8 +870,6 @@ def lineNews(notify):
     log('line news')
 
     try:
-        lineApi = LineBotApi(conf['line']['token'])
-
         keys = {v.name: v.ks.split(',') for v in d.execute('SELECT name, `keys` as ks FROM news_key_words').all()}
 
         data = [
@@ -883,7 +878,8 @@ def lineNews(notify):
 
         for news in data:
             for v in news:
-                lineApi.push_message(conf['line']['to'], TextMessage(text=v['text']))
+                lineApi.sendNews(v['texts'])
+
     except Exception as e:
         error(f"line-news error {e.__str__()}")
 
@@ -1282,8 +1278,7 @@ def cbs(type, code, year, month, start_ym, end_ym, notify, config):
             session.commit()
 
         if notify:
-            lineApi = LineBotApi(conf['line']['token'])
-            lineApi.push_message(conf['line']['to'], TextMessage(text=f"執行收集可轉債 {type}"))
+            lineApi.sendSystem(f"執行收集可轉債 {type}")
 
     except Exception as e:
         error(f"cb {type} error {e.__str__()}")
@@ -1300,6 +1295,7 @@ def stock(notify, config):
     d = db(file=config)
     session = Session(d)
     insert = []
+    names = []
 
     try:
         for value in twse.ipo():
@@ -1325,6 +1321,8 @@ def stock(notify, config):
                 'market': market,
             })
 
+            names.append(value['name'])
+
         if len(insert) == 0:
             return
 
@@ -1337,8 +1335,8 @@ def stock(notify, config):
             session.commit()
 
             if notify:
-                lineApi = LineBotApi(conf['line']['token'])
-                lineApi.push_message(conf['line']['to'], TextMessage(text=f"執行收集最近上市上櫃"))
+                s = ",".join(names)
+                lineApi.sendSystem(f"最近上市上櫃: {s}")
 
     except Exception as e:
         error(f"stock error {e.__str__()}")
@@ -1354,7 +1352,6 @@ def line(config):
     date = datetime.now().strftime(f"%Y-%m-%d")
     d = db(file=config)
     session = Session(d)
-    lineApi = LineBotApi(conf['line']['token'])
     message = []
 
     # 接近cb調整轉換價
@@ -1366,7 +1363,9 @@ def line(config):
     ).all()
 
     for v in conversionPrice:
-        message.append(f"代碼: {v.code}\n名稱: {v.name}\n日期: {v.date}\n 調整轉換價: {v.value}")
+        message.append([
+            f"代碼: {v.code}", f"名稱: {v.name}", f"日期: {v.date}", f"調整轉換價: {v.value}"
+        ])
 
     # cb上市第六天
     cbs = session.execute(
@@ -1393,12 +1392,13 @@ def line(config):
                 if v.cb_id != c.id:
                     continue
 
-                message.append(
-                    f"代碼:{c.code}\n名稱:{c.name}\n日期:{v.date}\n預估cbas拆解:{round((v.volume / (c.publish_total_amount / 100000)) * 100)}%"
-                )
+                message.append([
+                    f"代碼: {c.code}", f"名稱: {c.name}", f"日期: {v.date}",
+                    f"預估cbas拆解: {round((v.volume / (c.publish_total_amount / 100000)) * 100)}%",
+                ])
 
     for m in message:
-        lineApi.push_message(conf['line']['to'], TextMessage(text=m))
+        lineApi.sendCb(m)
 
 
 if __name__ == '__main__':

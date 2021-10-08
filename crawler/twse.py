@@ -402,7 +402,8 @@ def news(keys: dict):
                     'date': date,
                     'content': content,
                     'type': n,
-                    'text': f"代碼: {code}\n名稱: {name}\n 時間: {date}\n 種類: {n}\n\n{content}",
+                    'body': f"代碼: {code}\n名稱: {name}\n 時間: {date}\n 種類: {n}\n\n{content}",
+                    'texts': [f"代碼: {code}", f"名稱: {name}", f"時間: {date}", f"種類: {n}", content],
                 })
 
     return news
