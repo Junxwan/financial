@@ -67,7 +67,7 @@ else:
 conf = ConfigParser()
 conf.read('config.ini')
 
-lineApi = line.Api(conf['line']['token'])
+lineApi = line.Api(conf['line']['to'], conf['line']['token'])
 
 
 def log(msg):
