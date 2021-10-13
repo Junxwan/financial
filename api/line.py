@@ -1,3 +1,4 @@
+import requests
 from linebot import LineBotApi
 from linebot.models import FlexSendMessage
 
@@ -71,3 +72,17 @@ class Api(object):
 
     def sendCb(self, text: list):
         self.send('可轉債', text, '#D6DE7B')
+
+
+class Notify(object):
+    def __init__(self, token):
+        self.token = token
+
+    def send(self, text):
+        resp = requests.post("https://notify-api.line.me/api/notify", {
+            'message': text,
+        }, headers={
+            'Authorization': f'Bearer {self.token}'
+        })
+
+        return resp.json()['status'] == 200

@@ -68,6 +68,7 @@ conf = ConfigParser()
 conf.read('config.ini')
 
 lineApi = line.Api(conf['line']['to'], conf['line']['token'])
+notifyApi = line.Notify(conf['line']['notify_token'])
 
 
 def log(msg):
@@ -462,7 +463,8 @@ def merge_financial(input):
 @click.option('-t', '--type', default='all', type=click.Choice(EXPONENT, case_sensitive=False), help="指數類型")
 @click.option('-p', '--path', type=click.Path(), help="檔案輸入路徑")
 @click.option('-c', '--config', type=click.STRING, help="config")
-def price(type, path, config):
+@click.option('-n', '--notify', default=False, type=click.BOOL, help="通知")
+def price(type, path, config, notify):
     d = db(file=config)
 
     if type in 'TSE':
@@ -475,6 +477,9 @@ def price(type, path, config):
         twse.otc_industry(d)
     elif (type == 'XQ_INDUSTRY'):
         twse.xq_industry(path, d)
+
+    if notify:
+        notifyApi.send(f"執行完 {type} 股價")
 
 
 # tag產業指數
@@ -639,7 +644,7 @@ def tag_exponent(code, restart, config, notify):
                         f"save exponent tag:{stock.tag_id} name:{stock.name} stock:{stock.stock_id} count:{len(insert)}")
                     session.commit()
 
-                    # lineApi.sendSystem("執行產業指數")
+                    notifyApi.send('執行產業指數')
 
         except Exception as e:
             logging.error(
@@ -1283,8 +1288,8 @@ def cbs(type, code, year, month, start_ym, end_ym, notify, config):
 
             session.commit()
 
-        # if notify:
-        #     lineApi.sendSystem(f"執行收集可轉債 {type}")
+        if notify:
+            notifyApi.send(f"執行收集可轉債 {type}")
 
     except Exception as e:
         error(f"cb {type} error {e.__str__()}")
@@ -1340,9 +1345,9 @@ def stock(notify, config):
             logging.info(f"save stock count:{len(insert)}")
             session.commit()
 
-            # if notify:
-            #     s = ",".join(names)
-            #     lineApi.sendSystem(f"最近上市上櫃: {s}")
+            if notify:
+                s = ",".join(names)
+                notifyApi.send(f"最近上市上櫃: {s}")
 
     except Exception as e:
         error(f"stock error {e.__str__()}")
