@@ -68,7 +68,13 @@ conf = ConfigParser()
 conf.read('config.ini')
 
 lineApi = line.Api(conf['line']['to'], conf['line']['token'])
-notifyApi = line.Notify(conf['line']['notify_token'])
+notifyApi = line.Notify({
+    'cb': conf['line']['notify_cb_token'],
+    'system': conf['line']['notify_system_token'],
+    'news': conf['line']['notify_news_token'],
+    'financial': conf['line']['notify_financial_token'],
+    'fund': conf['line']['notify_fund_token'],
+})
 
 
 def log(msg):
@@ -479,7 +485,7 @@ def price(type, path, config, notify):
         twse.xq_industry(path, d)
 
     if notify:
-        notifyApi.send(f"執行完 {type} 股價")
+        notifyApi.sendSystem(f"執行完 {type} 股價")
 
 
 # tag產業指數
@@ -644,7 +650,7 @@ def tag_exponent(code, restart, config, notify):
                         f"save exponent tag:{stock.tag_id} name:{stock.name} stock:{stock.stock_id} count:{len(insert)}")
                     session.commit()
 
-                    notifyApi.send('執行產業指數')
+                    notifyApi.sendSystem('執行產業指數')
 
         except Exception as e:
             logging.error(
@@ -1289,7 +1295,7 @@ def cbs(type, code, year, month, start_ym, end_ym, notify, config):
             session.commit()
 
         if notify:
-            notifyApi.send(f"執行收集可轉債 {type}")
+            notifyApi.sendSystem(f"執行收集可轉債 {type}")
 
     except Exception as e:
         error(f"cb {type} error {e.__str__()}")
@@ -1347,7 +1353,7 @@ def stock(notify, config):
 
             if notify:
                 s = ",".join(names)
-                notifyApi.send(f"最近上市上櫃: {s}")
+                notifyApi.sendSystem(f"最近上市上櫃: {s}")
 
     except Exception as e:
         error(f"stock error {e.__str__()}")

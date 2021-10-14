@@ -75,14 +75,29 @@ class Api(object):
 
 
 class Notify(object):
-    def __init__(self, token):
-        self.token = token
+    def __init__(self, tokens):
+        self.tokens = tokens
 
-    def send(self, text):
+    def send(self, text, token):
         resp = requests.post("https://notify-api.line.me/api/notify", {
             'message': text,
         }, headers={
-            'Authorization': f'Bearer {self.token}'
+            'Authorization': f'Bearer {token}'
         })
 
         return resp.json()['status'] == 200
+
+    def sendSystem(self, text):
+        return self.send(text, self.tokens['system'])
+
+    def sendCb(self, text):
+        return self.send(text, self.tokens['cb'])
+
+    def sendNews(self, text):
+        return self.send(text, self.tokens['news'])
+
+    def sendFinancial(self, text):
+        return self.send(text, self.tokens['financial'])
+
+    def sendFund(self, text):
+        return self.send(text, self.tokens['fund'])
