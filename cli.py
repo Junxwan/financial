@@ -753,10 +753,12 @@ def get_fund(year, month, id, out, save, config, notify):
             isSave = True
 
             if save:
+                log(f'save fund {ym[:4]}-{ym[4:]}')
                 fund.imports(int(ym[:4]), int(ym[4:]), out, db(file=config))
 
         if isSave and notify:
             lineApi.sendFund(f"執行收集 {year}-{month} 投信持股明細")
+
 
     except Exception as e:
         error(f"fund error {e.__str__()}")
@@ -1351,6 +1353,8 @@ def stock(notify, config):
             logging.info(f"save stock count:{len(insert)}")
             session.commit()
 
+            log(f'save stock {insert.__str__()}')
+
             if notify:
                 s = ",".join(names)
                 notifyApi.sendSystem(f"最近上市上櫃: {s}")
@@ -1370,6 +1374,8 @@ def line(config):
     d = db(file=config)
     session = Session(d)
     message = []
+
+    log('start line')
 
     # 接近cb調整轉換價
     conversionPrice = session.execute(
