@@ -67,7 +67,6 @@ else:
 conf = ConfigParser()
 conf.read('config.ini')
 
-lineApi = line.Api(conf['line']['to'], conf['line']['token'])
 notifyApi = line.Notify({
     'cb': conf['line']['notify_cb_token'],
     'system': conf['line']['notify_system_token'],
@@ -276,7 +275,7 @@ def month_revenue(year, month, outpath, save, config, notify):
         log(f"save month_revenue {year}-{m} csv")
 
         if notify:
-            lineApi.sendMonthRevenue(f"收集 {m} 月營收完成")
+            notifyApi.sendFinancial(f"收集 {m} 月營收完成")
 
     except Exception as e:
         error(f"month_revenue error: {e.__str__()}")
@@ -321,7 +320,7 @@ def get_financial(year, season, outpath, type, save, config, notify):
                 s += v.__str__() + '\n'
 
             if notify:
-                lineApi.sendFinancial(f"收集 {result[0]['date']} 季報完成")
+                notifyApi.sendFinancial(f"收集 {result[0]['date']} 季報完成")
     except Exception as e:
         error(f"季報 error: {e.__str__()}")
 
@@ -696,6 +695,7 @@ def sp500(code, out):
 
         log(f"save {code} {date}")
 
+
 # 投信公會持股明細
 @cli.command('fund')
 @click.option('-y', '--year', type=click.INT, help="年")
@@ -756,7 +756,7 @@ def get_fund(year, month, id, out, save, config, notify):
                 fund.imports(int(ym[:4]), int(ym[4:]), out, db(file=config))
 
         if isSave and notify:
-            lineApi.sendFund(f"執行收集 {year}-{month} 投信持股明細")
+            notifyApi.sendFund(f"執行收集 {year}-{month} 投信持股明細")
 
 
     except Exception as e:
@@ -896,7 +896,7 @@ def lineNews(notify):
 
         for news in data:
             for v in news:
-                lineApi.sendNews(v['texts'])
+                notifyApi.sendNews(v['texts'])
 
     except Exception as e:
         error(f"line-news error {e.__str__()}")
@@ -1420,7 +1420,7 @@ def line(config):
                 ])
 
     for m in message:
-        lineApi.sendCb(m)
+        notifyApi.sendCb(m)
 
 
 if __name__ == '__main__':
