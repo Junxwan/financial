@@ -48,7 +48,7 @@ cb_info:
 
 # 可轉債轉換價格
 cb_conversion_price:
-		$(CLI) cb -t cb_conversion_price -n $(NOTIFY)
+		$(CLI) cb -t conversion_price -n $(NOTIFY)
 
 # 可轉債餘額
 cb_balance:
