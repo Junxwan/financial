@@ -1064,10 +1064,23 @@ def cbs(type, code, year, month, start_ym, end_ym, notify, config):
     session = Session(d)
 
     def conversion_price(cbs):
+        conversionPrices = []
         for code, id in cbs.items():
-            insert = []
-            prices = cb.conversionPrice(code)
+            conversionPrices.append({
+                'code': code,
+                'id': id,
+                'prices': cb.conversionPrice(code),
+            })
+
             time.sleep(6)
+
+        for c in conversionPrices:
+            insert = []
+            code = c['code']
+            id = c['id']
+            prices = c['prices']
+
+            time.sleep(1)
 
             value = session.execute("SELECT date FROM cb_conversion_prices WHERE cb_id = :id order by date desc",
                                     {'id': id}).all()
