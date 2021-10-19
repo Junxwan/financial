@@ -513,8 +513,8 @@ def tag_exponent(code, restart, config, notify):
         for row in rows:
             tags.append(row)
 
-    for stock in tags:
-        try:
+    try:
+        for stock in tags:
             if restart:
                 session.execute("DELETE FROM prices WHERE stock_id = :id", {'id': stock.stock_id})
 
@@ -649,15 +649,15 @@ def tag_exponent(code, restart, config, notify):
                         f"save exponent tag:{stock.tag_id} name:{stock.name} stock:{stock.stock_id} count:{len(insert)}")
                     session.commit()
 
-                    notifyApi.sendSystem('執行產業指數')
+        notifyApi.sendSystem('執行產業指數')
 
-        except Exception as e:
-            logging.error(
-                f"tag exponent tag:{stock.tag_id} name:{stock.name} stock:{stock.stock_id} error: {e.__str__()}"
-            )
+    except Exception as e:
+        logging.error(
+            f"tag exponent error: {e.__str__()}"
+        )
 
-            if notify:
-                setEmail("系統錯誤-產業指數", {e.__str__()})
+        if notify:
+            setEmail("系統錯誤-產業指數", {e.__str__()})
 
 
 # 面板報價
@@ -896,7 +896,7 @@ def lineNews(notify):
 
         for news in data:
             for v in news:
-                notifyApi.sendNews(v['texts'])
+                notifyApi.sendNews(v['body'])
 
     except Exception as e:
         error(f"line-news error {e.__str__()}")
