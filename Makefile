@@ -24,11 +24,11 @@ tag_exponent:
 
 # 爬大盤價格
 get_tse:
-		$(CLI) price -t TSE
+		$(CLI) price -t TSE -n $(NOTIFY)
 
 # 爬OTC價格
 get_otc:
-		$(CLI) price -t OTC
+		$(CLI) price -t OTC -n $(NOTIFY)
 
 # 爬新聞內容
 get_news_content:
