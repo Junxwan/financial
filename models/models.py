@@ -180,6 +180,7 @@ company = Table('companies', metadata,
 fund = Table('funds', metadata,
              Column('id', Integer, primary_key=True),
              Column('company_id', Integer),
+             Column('code', String),
              Column('name', Text),
              )
 

@@ -1,6 +1,7 @@
 import logging
 import time
 from datetime import datetime
+import pandas as pd
 import requests
 from bs4 import BeautifulSoup
 
@@ -102,6 +103,71 @@ def get(year=None, month=None, id=None):
     return data
 
 
+def detail(year=None, month=None):
+    r = requests.get("https://www.sitca.org.tw/ROC/Industry/IN2201.aspx", headers=HEADERS)
+
+    if r.status_code != 200:
+        return None
+
+    soup = BeautifulSoup(r.text, 'html.parser')
+    select = soup.find_all('select')
+
+    dates = [v.attrs['value'] for v in select[0].find_all('option')]
+
+    yms = []
+    if year is None and month is None:
+        yms = dates
+    elif year is not None and month is not None:
+        yms = [f"{year}{month:02}"]
+    elif year is not None:
+        if year == datetime.now().year:
+            yms = [f"{year}{i + 1:02}" for i in range(datetime.now().month - 1)]
+        else:
+            yms = [f"{year}{i + 1:02}" for i in range(12)]
+    elif month is not None:
+        yms = [f"{datetime.now().year}{month:02}"]
+
+    data = {}
+    for ym in yms[::-1]:
+        if ym not in dates:
+            logging.info(f"{ym} fund detail not found")
+            continue
+
+        data[ym] = []
+        r = _detail(ym, soup)
+        time.sleep(1)
+
+        tds = BeautifulSoup(r.text, 'html.parser').find_all('table')[3].find_all('td')
+        headers = [str(v.contents[0]) for v in tds[1:17]]
+        rows = []
+
+        i = 0
+        for v in tds[17:]:
+            if i == 14:
+                i = 0
+
+            if i > 0:
+                i += 1
+                continue
+
+            if 'colspan' in v.attrs and v.attrs['colspan'] == '4' and i == 0:
+                i = 1
+                continue
+
+            rows.append(v)
+
+        for i in range(int(len(rows) / 17)):
+            d = {}
+            value = rows[i * 17:17 + i * 17]
+
+            for i, n in enumerate(headers):
+                d[n] = value[1 + i].text
+
+            data[ym].append(d)
+
+    return data
+
+
 def _get(ym, id, soup):
     __VIEWSTATE = soup.find('input', id='__VIEWSTATE')
     if __VIEWSTATE is None:
@@ -126,3 +192,33 @@ def _get(ym, id, soup):
         return None
 
     return r
+
+
+def _detail(ym, soup):
+    __VIEWSTATE = soup.find('input', id='__VIEWSTATE')
+    if __VIEWSTATE is None:
+        __VIEWSTATE = ''
+    else:
+        __VIEWSTATE = __VIEWSTATE.attrs['value']
+
+    r = requests.post("https://www.sitca.org.tw/ROC/Industry/IN2201.aspx", {
+        "__EVENTTARGET": '',
+        "__EVENTARGUMENT": '',
+        "__LASTFOCUS": '',
+        "__VIEWSTATE": __VIEWSTATE,
+        "__VIEWSTATEGENERATOR": soup.find('input', id='__VIEWSTATEGENERATOR').attrs['value'],
+        "__EVENTVALIDATION": soup.find('input', id='__EVENTVALIDATION').attrs['value'],
+        "ctl00$ContentPlaceHolder1$ddlQ_YM": ym,
+        "ctl00$ContentPlaceHolder1$ddlQ_COLUMN": "1",
+        "ctl00$ContentPlaceHolder1$rdo1": "rbComid",
+        "ctl00$ContentPlaceHolder1$ddlQ_Comid": '',
+        "ctl00$ContentPlaceHolder1$BtnQuery": "查詢",
+    }, headers=HEADERS)
+
+    if r.status_code != 200:
+        return None
+
+    return r
+
+
+detail(2021, 9)
