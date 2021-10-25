@@ -281,6 +281,7 @@ def _info(year, month, soup):
         __VIEWSTATE = __VIEWSTATE.attrs['value']
 
     month = int(month)
+    year = int(year)
     m = "%02d" % month
     ym = f"{year}{m}"
 

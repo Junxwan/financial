@@ -758,7 +758,8 @@ def get_fund(year, month, id, out, save, config, notify):
         if isSave and notify:
             notifyApi.sendFund(f"執行收集 {year}-{month} 投信持股明細")
 
-        for ym, rows in cFund.detail(year, month).items():
+        detail = cFund.detail(year, month)
+        for ym, rows in detail.items():
             f = os.path.join(out, str(ym), 'detail') + ".csv"
 
             if os.path.exists(f) or len(rows) == 0:
@@ -771,12 +772,12 @@ def get_fund(year, month, id, out, save, config, notify):
 
             isSave = True
 
-            if save:
-                log(f'save fund detail {ym[:4]}-{ym[4:]}')
-                fund.save_detail(int(ym[:4]), int(ym[4:]), rows, db(file=config))
+        if save and len(detail) > 0:
+            log('save fund detail')
+            fund.save_detail(detail, db(file=config))
 
-            if isSave and notify:
-                notifyApi.sendFund(f"執行收集 {year}-{month} 投信明細")
+        if isSave and notify:
+            notifyApi.sendFund(f"執行收集 {year}-{month} 投信明細")
 
     except Exception as e:
         error(f"fund error {e.__str__()}")
