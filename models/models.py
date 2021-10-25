@@ -260,7 +260,21 @@ cbPrice = Table('cb_prices', metadata,
                 )
 
 newsKeyWord = Table('news_key_words', metadata,
-                Column('id', Integer, primary_key=True),
-                Column('name', String(50)),
-                Column('keys', String(255))
-                )
+                    Column('id', Integer, primary_key=True),
+                    Column('name', String(50)),
+                    Column('keys', String(255))
+                    )
+
+fundDetails = Table('fund_details', metadata,
+                    Column('id', Integer, primary_key=True),
+                    Column('year', Integer),
+                    Column('month', Integer),
+                    Column('fund_id', Integer),
+                    Column('scale', Integer),
+                    Column('value', Float),
+                    Column('natural_person', Integer),
+                    Column('legal_person', Integer),
+                    Column('person', Integer),
+                    Column('buy_amount', Integer),
+                    Column('sell_amount', Integer),
+                    )

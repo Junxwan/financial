@@ -10,7 +10,6 @@ USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/537.36
 HEADERS = {
     'User-Agent': USER_AGENT,
     'Host': "www.sitca.org.tw",
-    'Referer': "https://www.sitca.org.tw/ROC/Industry/IN2629.aspx",
     'Origin': "https://www.sitca.org.tw",
 }
 
@@ -127,6 +126,10 @@ def detail(year=None, month=None):
     elif month is not None:
         yms = [f"{datetime.now().year}{month:02}"]
 
+    headers = ['類型代號', '基金統編', '基金名稱', '計價幣別', '基金規模(台幣)', '基金規模(原幣)', '基金規模市場占有率', '單位淨值(台幣)',
+               '單位淨值(原幣)', '受益權單位數', '自然人受益人數', '法人受益人數', '總受益人數', '本月申購總金額(台幣)', '本月申購總金額(原幣)',
+               '本月買回總金額(台幣)', '本月買回總金額(原幣)'
+               ]
     data = {}
     for ym in yms[::-1]:
         if ym not in dates:
@@ -138,7 +141,6 @@ def detail(year=None, month=None):
         time.sleep(1)
 
         tds = BeautifulSoup(r.text, 'html.parser').find_all('table')[3].find_all('td')
-        headers = [str(v.contents[0]) for v in tds[1:17]]
         rows = []
 
         i = 0
@@ -160,8 +162,58 @@ def detail(year=None, month=None):
             d = {}
             value = rows[i * 17:17 + i * 17]
 
-            for i, n in enumerate(headers):
-                d[n] = value[1 + i].text
+            for a, n in enumerate(headers):
+                d[n] = value[a].text
+
+            data[ym].append(d)
+
+    return data
+
+
+def info(year=None, month=None):
+    r = requests.get("https://www.sitca.org.tw/ROC/Industry/IN2105.aspx", headers=HEADERS)
+
+    if r.status_code != 200:
+        return None
+
+    soup = BeautifulSoup(r.text, 'html.parser')
+    select = soup.find_all('select')
+
+    dates = [v.attrs['value'] for v in select[0].find_all('option')]
+
+    yms = []
+    if year is None and month is None:
+        yms = dates
+    elif year is not None and month is not None:
+        yms = [f"{year}{month:02}"]
+    elif year is not None:
+        if year == datetime.now().year:
+            yms = [f"{year}{i + 1:02}" for i in range(datetime.now().month - 1)]
+        else:
+            yms = [f"{year}{i + 1:02}" for i in range(12)]
+    elif month is not None:
+        yms = [f"{datetime.now().year}{month:02}"]
+
+    headers = ['類型代號', '基金統編', '基金ISIN Code', '受益憑證代號', '基金名稱']
+
+    data = {}
+    for ym in yms[::-1]:
+        if ym not in dates:
+            logging.info(f"{ym} fund info not found")
+            continue
+
+        data[ym] = []
+        r = _info(ym[:4], ym[4:], soup)
+        time.sleep(1)
+
+        rows = BeautifulSoup(r.text, 'html.parser').find_all('table')[3].find_all('td')[23:]
+
+        for i in range(int(len(rows) / 22)):
+            d = {}
+            value = rows[i * 22:22 + i * 22]
+
+            for a, n in enumerate(headers):
+                d[n] = value[a].text
 
             data[ym].append(d)
 
@@ -221,4 +273,41 @@ def _detail(ym, soup):
     return r
 
 
-detail(2021, 9)
+def _info(year, month, soup):
+    __VIEWSTATE = soup.find('input', id='__VIEWSTATE')
+    if __VIEWSTATE is None:
+        __VIEWSTATE = ''
+    else:
+        __VIEWSTATE = __VIEWSTATE.attrs['value']
+
+    month = int(month)
+    m = "%02d" % month
+    ym = f"{year}{m}"
+
+    if (month - 1) == 0:
+        ym2 = f"{year - 1}1231"
+    else:
+        m1 = "%02d" % (month - 1)
+        ym2 = f"{year}{m1}"
+
+    r = requests.post("https://www.sitca.org.tw/ROC/Industry/IN2105.aspx", {
+        "__EVENTTARGET": '',
+        "__EVENTARGUMENT": '',
+        "__LASTFOCUS": '',
+        "__VIEWSTATE": __VIEWSTATE,
+        "__VIEWSTATEGENERATOR": soup.find('input', id='__VIEWSTATEGENERATOR').attrs['value'],
+        "__EVENTVALIDATION": soup.find('input', id='__EVENTVALIDATION').attrs['value'],
+        "ctl00$ContentPlaceHolder1$ddlQ_YYYYMM": ym,
+        "ctl00$ContentPlaceHolder1$ddlQ_Column": 1,
+        "ctl00$ContentPlaceHolder1$ddlQ_Comid": '',
+        "ctl00$ContentPlaceHolder1$ddlQ_FundNo": "",
+        "ctl00$ContentPlaceHolder1$BtnQuery": "查詢",
+        'ctl00$ContentPlaceHolder1$sLSTMENDDATE': f"{ym}31",
+        'ctl00$ContentPlaceHolder1$sLST2MENDDATE': f"{ym2}31",
+    }, headers=HEADERS)
+
+    if r.status_code != 200:
+        return None
+
+    return r
+

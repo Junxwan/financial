@@ -2,6 +2,7 @@ import os
 import glob
 import logging
 import pandas as pd
+from crawler import fund as cFund
 from models import models
 from sqlalchemy import engine
 from sqlalchemy.orm import Session
@@ -19,6 +20,7 @@ def imports(year, month, dir, d: engine):
     session = Session(d)
     companies = {v.code: v.id for v in session.execute(models.company.select()).all()}
     stocks = {v.code: v.id for v in session.execute(models.stock.select()).all()}
+    fundInfos = {v['基金名稱']: v['基金統編'] for v in cFund.info(year, month)}
 
     for p in paths:
         logging.info(f"read fund {p}")
@@ -46,7 +48,12 @@ def imports(year, month, dir, d: engine):
             )
 
             if len(funds) > 0:
-                insert = [{'company_id': id, 'name': n} for n in funds]
+                insert = [{'company_id': id, 'name': n, 'code': ''} for n in funds]
+
+                for i, v in enumerate(insert):
+                    if v['name'] in fundInfos:
+                        insert[i]['code'] = fundInfos[v['name']]
+
                 result = session.execute(models.fund.insert(), insert)
 
                 if result.is_insert == False or result.rowcount != len(insert):
@@ -106,3 +113,40 @@ def imports(year, month, dir, d: engine):
                     session.commit()
 
         logging.info(f"end read fund {p}")
+
+
+def save_detail(data: dict, d: engine):
+    insert = []
+    session = Session(d)
+    funds = {v.code: v.id for v in session.execute("select id, code from funds where code != ''").all()}
+
+    for ym, rows in data.items():
+        year = int(ym[:4])
+        month = int(ym[4:])
+
+        for v in rows:
+            if v['基金統編'] not in funds:
+                continue
+
+            insert.append({
+                'fund_id': funds[v['基金統編']],
+                'year': year,
+                'month': month,
+                'scale': v['基金規模(台幣)'].replace(",",""),
+                'value': v['單位淨值(台幣)'].replace(",",""),
+                'natural_person': v['自然人受益人數'].replace(",",""),
+                'legal_person': v['法人受益人數'].replace(",",""),
+                'person': v['總受益人數'].replace(",",""),
+                'buy_amount': v['本月申購總金額(台幣)'].replace(",",""),
+                'sell_amount': v['本月買回總金額(台幣)'].replace(",",""),
+            })
+
+    if len(insert) > 0:
+        result = session.execute(models.fundDetails.insert(), insert)
+
+        if result.is_insert == False or result.rowcount != len(insert):
+            logging.error("insert fund detail")
+            return False
+        else:
+            logging.info(f"save fund detail {len(insert)} count")
+            session.commit()
