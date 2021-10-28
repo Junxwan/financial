@@ -788,115 +788,108 @@ def get_fund(year, month, id, out, save, config, notify):
 
 # 新聞
 @cli.command('news')
-@click.option('-e', '--email', type=click.STRING, help="email")
 @click.option('-h', '--hours', type=click.INT, help="小時")
 @click.option('-s', '--save', type=click.BOOL, help="是否保存在db")
-def news(email, hours, save=False):
-    log('start news')
+@click.option('-n', '--notify', default=False, type=click.BOOL, help="通知")
+def news(hours, save=False, notify=False):
+    try:
+        log('start news')
 
-    tz = pytz.timezone('Asia/Taipei')
-    now = datetime.now(tz)
-    date = (now - timedelta(hours=hours)).strftime("%Y-%m-%d %H:%M:%S")
+        tz = pytz.timezone('Asia/Taipei')
+        now = datetime.now(tz)
+        date = (now - timedelta(hours=hours)).strftime("%Y-%m-%d %H:%M:%S")
 
-    data = [
-        ['聯合報-產經', cnews.udn('6644', date)],
-        ['聯合報-股市', cnews.udn('6645', date)],
-        ['蘋果-財經地產', cnews.appledaily(date)],
-        ['中時', cnews.chinatimes(date)],
-        ['中時-財經要聞', cnews.chinatimes_newspapers(date)],
-        ['科技新報', cnews.technews(date)],
-        ['經濟日報-產業熱點', cnews.money_udn('5591', '5612', date)],
-        ['經濟日報-生技醫藥', cnews.money_udn('5591', '10161', date)],
-        ['經濟日報-企業CEO', cnews.money_udn('5591', '5649', date)],
-        ['經濟日報-總經趨勢', cnews.money_udn('10846', '10869', date)],
-        ['經濟日報-2021投資前瞻', cnews.money_udn('10846', '121887', date)],
-        ['經濟日報-國際焦點', cnews.money_udn('5588', '5599', date)],
-        ['經濟日報-美中貿易戰', cnews.money_udn('5588', '10511', date)],
-        ['經濟日報-金融脈動', cnews.money_udn('12017', '5613', date)],
-        ['經濟日報-市場焦點', cnews.money_udn('5590', '5607', date)],
-        ['經濟日報-集中市場', cnews.money_udn('5590', '5710', date)],
-        ['經濟日報-櫃買市場', cnews.money_udn('5590', '11074', date)],
-        ['經濟日報-國際期貨', cnews.money_udn('11111', '11114', date)],
-        ['經濟日報-國際綜合', cnews.money_udn('12925', '121854', date)],
-        ['經濟日報-外媒解析', cnews.money_udn('12925', '12937', date)],
-        ['經濟日報-產業動態', cnews.money_udn('12925', '121852', date)],
-        ['經濟日報-產業分析', cnews.money_udn('12925', '12989', date)],
-        ['工商時報-產業', cnews.ctee(date, 'industry')],
-        ['工商時報-科技', cnews.ctee(date, 'tech')],
-        ['工商時報-國際', cnews.ctee(date, 'global')],
-        ['工商時報-兩岸', cnews.ctee(date, 'china')],
-        ['鉅亨網-台股', cnews.cnyes(date, 'tw_stock')],
-        ['鉅亨網-國際股', cnews.cnyes(date, 'wd_stock')],
-        ['自由時報-國際財經', cnews.ltn(date, 'international')],
-        ['自由時報-證券產業', cnews.ltn(date, 'securities')],
-        ['moneydj-頭條新聞', cnews.moneydj(date, 'mb010000')],
-        ['moneydj-總體經濟', cnews.moneydj(date, 'mb020000')],
-        ['moneydj-債券市場', cnews.moneydj(date, 'mb040200')],
-        ['moneydj-產業情報', cnews.moneydj(date, 'mb07')],
-        ['東森新聞-財經新聞台股', cnews.ebc(date, 'stock')],
-        ['trendforce', cnews.trendforce(date)],
-        ['dramx', cnews.dramx(date)],
-        ['digitimes-報導總欄', cnews.digitimes(date)],
-    ]
+        data = [
+            ['聯合報-產經', cnews.udn('6644', date)],
+            ['聯合報-股市', cnews.udn('6645', date)],
 
-    log('get news ok')
+            ['中時', cnews.chinatimes(date)],
 
-    if save:
-        db = conf['databases']
-        engine = create_engine(f"mysql+pymysql://{db['user']}:{db['password']}@{db['host']}:{db['port']}/{db['table']}",
-                               encoding='utf8')
-        source = {}
-        for v in engine.execute(models.source.select()).all():
-            source[v['name']] = v['id']
+            ['科技新報', cnews.technews(date)],
 
-        insert = []
-        for item in data:
-            if item[0] not in source or len(item[1]) == 0:
-                continue
+            ['經濟日報-產業熱點', cnews.money_udn('5591', '5612', date)],
+            ['經濟日報-科技產業', cnews.money_udn('5591', '11162', date)],
+            ['經濟日報-今晨必讀', cnews.money_udn('10846', '12926', date)],
+            ['經濟日報-總經趨勢', cnews.money_udn_rss('10846', '10869', date)],
+            ['經濟日報-經濟周報', cnews.money_udn_rss('10846', '122335', date)],
+            ['經濟日報-市場焦點', cnews.money_udn_rss('5590', '5607', date)],
+            ['經濟日報-集中市場', cnews.money_udn_rss('5590', '5710', date)],
+            ['經濟日報-櫃買市場', cnews.money_udn_rss('5590', '11074', date)],
+            ['經濟日報-證券達人', cnews.money_udn_rss('5590', '8543', date)],
+            ['經濟日報-外媒解析', cnews.money_udn_rss('5588', '122381', date)],
+            ['經濟日報-國際焦點', cnews.money_udn_rss('5588', '5599', date)],
+            ['經濟日報-美中貿易戰', cnews.money_udn_rss('5588', '10511', date)],
+            ['經濟日報-大陸政經', cnews.money_udn_rss('5589', '5603', date)],
+            ['經濟日報-金融脈動', cnews.money_udn_rss('12017', '5613', date)],
+            ['經濟日報-外匯市場', cnews.money_udn_rss('12017', '5616', date)],
+            ['經濟日報-國際期貨', cnews.money_udn_rss('11111', '11114', date)],
 
-            for v in item[1]:
-                insert.append({
-                    'source_id': source[item[0]],
-                    'title': v['title'],
-                    'url': v['url'],
-                    'publish_time': v['date']
-                })
+            ['工商時報-產業', cnews.ctee(date, 'industry')],
+            ['工商時報-科技', cnews.ctee(date, 'tech')],
+            ['工商時報-國際', cnews.ctee(date, 'global')],
+            ['工商時報-兩岸', cnews.ctee(date, 'china')],
 
-        session = Session(engine)
-        result = session.execute(models.news.insert(), insert)
+            ['鉅亨網-台股', cnews.cnyes(date, 'tw_stock')],
+            ['鉅亨網-國際股', cnews.cnyes(date, 'wd_stock')],
+            ['鉅亨網-期貨', cnews.cnyes(date, 'future')],
 
-        if result.is_insert == False or result.rowcount != len(insert):
-            error('insert error ' + date.__str__())
-        else:
-            session.commit()
+            ['自由時報-國際財經', cnews.ltn(date, 'international')],
+            ['自由時報-證券產業', cnews.ltn(date, 'securities')],
 
-    if email is not None:
-        now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            ['moneydj-頭條新聞', cnews.moneydj(date, 'mb010000')],
+            ['moneydj-總體經濟', cnews.moneydj(date, 'mb020000')],
+            ['moneydj-債券市場', cnews.moneydj(date, 'mb040200')],
+            ['moneydj-科技脈動', cnews.moneydj(date, 'mb070100')],
+            ['moneydj-產業情報', cnews.moneydj(date, 'mb07')],
 
-        html = render('email.html',
-                      news=[{'title': v[0], 'news': v[1]} for v in data],
-                      date=now,
-                      end_date=date,
-                      )
+            ['trendforce', cnews.trendforce(date)],
 
-        content = MIMEMultipart()
-        content["from"] = conf['smtp']['login_email']
-        content["subject"] = f"財經新聞-{now}"
-        content["to"] = email
-        content.attach(MIMEText(html, 'html'))
+            ['dramx', cnews.dramx(date)],
+        ]
 
-        log(f"login email: {conf['smtp']['login_email']}")
-        log(f"send email: {email}")
+        log('get news ok')
 
-        with smtplib.SMTP(host="smtp.gmail.com", port="587") as smtp:
-            try:
-                smtp.ehlo()  # 驗證SMTP伺服器
-                smtp.starttls()  # 建立加密傳輸
-                smtp.login(conf['smtp']['login_email'], conf['smtp']['password'])
-                smtp.send_message(content)
-                log('set news email ok')
-            except Exception as e:
-                error(f"set news email error {e.__str__()}")
+        if save:
+            db = conf['databases']
+            engine = create_engine(
+                f"mysql+pymysql://{db['user']}:{db['password']}@{db['host']}:{db['port']}/{db['table']}",
+                encoding='utf8')
+            source = {}
+            for v in engine.execute(models.source.select()).all():
+                source[v['name']] = v['id']
+
+            insert = []
+            for item in data:
+                if item[0] not in source or len(item[1]) == 0:
+                    continue
+
+                for v in item[1]:
+                    insert.append({
+                        'source_id': source[item[0]],
+                        'title': v['title'],
+                        'url': v['url'],
+                        'publish_time': v['date']
+                    })
+
+            session = Session(engine)
+            result = session.execute(models.news.insert(), insert)
+
+            if result.is_insert == False or result.rowcount != len(insert):
+                error('insert new error ' + date.__str__())
+
+                if notify:
+                    setEmail(f"系統通知錯誤 新聞", f"{date.__str__()}")
+            else:
+                session.commit()
+
+                if notify:
+                    notifyApi.sendSystem(f"執行收集 新聞")
+
+    except Exception as e:
+        error(f"new error {e.__str__()}")
+
+        if notify:
+            setEmail(f"系統通知錯誤 新聞", f"{e.__str__()}")
 
 
 # 即時重大公告

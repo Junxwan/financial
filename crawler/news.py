@@ -128,6 +128,68 @@ def appledaily(end_date, timezone='Asia/Taipei'):
     return news
 
 
+# 經濟日報章內容
+def money_udn_context(url):
+    r = requests.get(url, headers=HEADERS)
+
+    if r.status_code != 200:
+        return None
+
+    soup = BeautifulSoup(r.text, 'html.parser')
+    if soup is None:
+        return None
+
+    tz = pytz.timezone('Asia/Taipei')
+
+    return {
+        'title': soup.find(id='story_art_title').text,
+        'date': dt.fromtimestamp(parser.parse(soup.find('time').text.strip()).timestamp(), tz=tz).strftime(
+            '%Y-%m-%d %H:%M:%S'),
+        'body': soup.find(class_='article-body').text,
+    }
+
+
+def money_udn(cate_id, sub_id, end_date):
+    news = []
+    page = 1
+    isRun = True
+
+    while isRun:
+        if page >= LIMIT:
+            break
+
+        r = requests.get(
+            f"https://money.udn.com/money/get_article/{page}/1001/{cate_id}/{sub_id}?_={time.time()}",
+            headers=HEADERS
+        )
+
+        if r.status_code != 200:
+            break
+
+        soup = BeautifulSoup(r.text, 'html.parser')
+        for v in soup.find_all('li'):
+            url = f"https://money.udn.com{v.find('a').attrs['href']}"
+            context = money_udn_context(url)
+
+            if context['date'] <= end_date:
+                isRun = False
+                break
+
+            news.append({
+                'title': context['title'],
+                'url': url,
+                'date': context['date'],
+            })
+
+            time.sleep(3)
+
+        page = page + 1
+
+        time.sleep(1)
+
+    return news
+
+
 # 經濟日報
 # https://money.udn.com/money/cate/5591 產業熱點(5612) 生技醫藥(10161) 企業CEO(5649)
 # https://money.udn.com/money/cate/10846 總經趨勢(10869) 2021投資前瞻(121887)
@@ -136,7 +198,7 @@ def appledaily(end_date, timezone='Asia/Taipei'):
 # https://money.udn.com/money/cate/5590 市場焦點(5607) 集中市場(5710) 櫃買市場(11074)
 # https://money.udn.com/money/cate/11111 國際期貨(11114)
 # https://money.udn.com/money/cate/12925 國際綜合(121854) 外媒解析(12937) 產業動態(121852) 產業分析(12989)
-def money_udn(cate_id, sub_id, end_date, timezone='Asia/Taipei'):
+def money_udn_rss(cate_id, sub_id, end_date, timezone='Asia/Taipei'):
     news = []
     data = feedparser.parse(f"https://money.udn.com/rssfeed/news/1001/{cate_id}/{sub_id}?ch=money")
     tz = pytz.timezone(timezone)
@@ -200,19 +262,6 @@ def money_udn_stock(end_date, timezone='Asia/Taipei'):
         time.sleep(1)
 
     return news
-
-# 經濟日報章內容
-def money_udn_context(url):
-    r = requests.get(url, headers=HEADERS)
-
-    if r.status_code != 200:
-        return None
-
-    soup = BeautifulSoup(r.text, 'html.parser').find('div', id='article_body')
-    if soup is None:
-        return None
-
-    return soup.prettify()
 
 
 # 中時 https://www.chinatimes.com/money/total?page=1&chdtv
@@ -418,6 +467,7 @@ def ctee_context(url):
 # 鉅亨網
 # https://news.cnyes.com/news/cat/tw_stock (台股)
 # https://news.cnyes.com/news/cat/wd_stock (國際股)
+# https://news.cnyes.com/news/cat/future (期貨)
 def cnyes(end_date, type, timezone='Asia/Taipei'):
     r = requests.get(
         f"https://news.cnyes.com/news/cat/{type}",
@@ -531,6 +581,7 @@ def ltn_context(url):
 # https://www.moneydj.com/kmdj/news/newsreallist.aspx?a=mb020000 (總體經濟)
 # https://www.moneydj.com/kmdj/news/newsreallist.aspx?a=mb040200 (債券市場)
 # https://www.moneydj.com/kmdj/news/newsreallist.aspx?a=mb07 (產業情報)
+# https://www.moneydj.com/kmdj/news/newsreallist.aspx?a=mb070100 (科技脈動)
 def moneydj(end_date, type):
     news = []
     isRun = True
@@ -549,7 +600,7 @@ def moneydj(end_date, type):
             break
 
         soup = BeautifulSoup(r.text, 'html.parser')
-        y = soup.find('span', class_='today').text.strip()[:4]
+        y = end_date[:4]
 
         for v in soup.find('table', class_='forumgrid').find_all('tr'):
             if v.text.strip() == '時間標題人氣':
