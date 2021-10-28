@@ -794,11 +794,12 @@ def get_fund(year, month, id, out, save, config, notify):
 @click.option('-n', '--notify', default=False, type=click.BOOL, help="通知")
 def news(hours, save=False, notify=False):
     try:
-        log('start news')
 
         tz = pytz.timezone('Asia/Taipei')
         now = datetime.now(tz)
         date = (now - timedelta(hours=hours)).strftime("%Y-%m-%d %H:%M:%S")
+
+        log(f"start news {date}")
 
         data = [
             ['聯合報-產經', cnews.udn('6644', date)],
