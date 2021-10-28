@@ -18,6 +18,7 @@ import crawler.cb as cb
 import pandas as pd
 from api import line
 from bs4 import BeautifulSoup
+from dateutil import parser
 from models import models
 from sqlalchemy.orm import Session
 from sqlalchemy import create_engine
@@ -859,6 +860,8 @@ def news(hours, save=False, notify=False):
                 source[v['name']] = v['id']
 
             insert = []
+            tz = pytz.timezone('Asia/Taipei')
+
             for item in data:
                 if item[0] not in source or len(item[1]) == 0:
                     continue
@@ -868,7 +871,8 @@ def news(hours, save=False, notify=False):
                         'source_id': source[item[0]],
                         'title': v['title'],
                         'url': v['url'],
-                        'publish_time': v['date']
+                        'publish_time': (datetime.fromtimestamp(parser.parse(v['date']).timestamp(), tz=tz) - timedelta(
+                            hours=8)).strftime('%Y-%m-%d %H:%M:%S')
                     })
 
             session = Session(engine)
