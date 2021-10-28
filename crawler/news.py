@@ -139,11 +139,9 @@ def money_udn_context(url):
     if soup is None:
         return None
 
-    tz = pytz.timezone('Asia/Taipei')
-
     return {
         'title': soup.find(id='story_art_title').text,
-        'date': dt.fromtimestamp(parser.parse(soup.find('time').text.strip()).timestamp(), tz=tz).strftime(
+        'date': dt.fromtimestamp(parser.parse(soup.find('time').text.strip()).timestamp()).strftime(
             '%Y-%m-%d %H:%M:%S'),
         'body': soup.find(class_='article-body').text,
     }
