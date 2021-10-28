@@ -794,7 +794,6 @@ def get_fund(year, month, id, out, save, config, notify):
 @click.option('-n', '--notify', default=False, type=click.BOOL, help="通知")
 def news(hours, save=False, notify=False):
     try:
-
         tz = pytz.timezone('Asia/Taipei')
         now = datetime.now(tz)
         date = (now - timedelta(hours=hours)).strftime("%Y-%m-%d %H:%M:%S")
@@ -861,7 +860,6 @@ def news(hours, save=False, notify=False):
                 source[v['name']] = v['id']
 
             insert = []
-            tz = pytz.timezone('Asia/Taipei')
 
             for item in data:
                 if item[0] not in source or len(item[1]) == 0:
@@ -872,8 +870,7 @@ def news(hours, save=False, notify=False):
                         'source_id': source[item[0]],
                         'title': v['title'],
                         'url': v['url'],
-                        'publish_time': (datetime.fromtimestamp(parser.parse(v['date']).timestamp(), tz=tz) - timedelta(
-                            hours=8)).strftime('%Y-%m-%d %H:%M:%S')
+                        'publish_time': v['date']
                     })
 
             session = Session(engine)

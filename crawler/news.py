@@ -51,7 +51,7 @@ def udn(cate_id, end_date):
             news.append({
                 'title': v['title'],
                 'url': f"https://udn.com{v['titleLink']}",
-                'date': v['time']['date'],
+                'date': f"{v['time']['date']}:00",
             })
 
         page = page + 1
