@@ -16,6 +16,8 @@ HEADERS = {
 
 LIMIT = 15
 
+TIMEZONE = pytz.timezone('Asia/Taipei')
+
 
 # 聯合報
 # cate_id 6644(產經) 6645(股市)
@@ -434,6 +436,52 @@ def ctee(end_date, type, timezone='Asia/Taipei'):
             news.append({
                 'title': v.find('h2', class_='title').text.strip(),
                 'url': v.find('h2', class_='title').a.attrs['href'],
+                'date': date,
+            })
+
+        page = page + 1
+
+        time.sleep(1)
+
+    return news
+
+
+# 工商時報
+# https://ctee.com.tw/livenews/aj (財經)
+# https://ctee.com.tw/livenews/gj (國際)
+# https://ctee.com.tw/livenews/kj (科技)
+# https://ctee.com.tw/livenews/lm (兩岸)
+def cteeV2(end_date, type):
+    news = []
+    isRun = True
+    page = 1
+
+    while isRun:
+        if page >= LIMIT:
+            break
+
+        r = requests.get(
+            f"https://ctee.com.tw/livenews/{type}/page/{page}",
+            headers=HEADERS
+        )
+
+        if r.status_code != 200:
+            break
+
+        soup = BeautifulSoup(r.text, 'html.parser')
+        year = soup.find(class_='topbar-date').text.split('.')[0]
+
+        for v in soup.find_all(class_='item-content'):
+            d = f"{year}/{v.find_all('a')[1].contents[1].text.replace('|', '').strip()}"
+            date = dt.fromtimestamp(parser.parse(d).timestamp(), tz=TIMEZONE).strftime('%Y-%m-%d %H:%M:%S')
+
+            if date <= end_date:
+                isRun = False
+                break
+
+            news.append({
+                'title': str(v.find_all('a')[1].contents[0]).strip(),
+                'url': v.find_all('a')[1].attrs['href'],
                 'date': date,
             })
 

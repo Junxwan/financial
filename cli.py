@@ -825,10 +825,10 @@ def news(hours, save=False, notify=False):
             ['經濟日報-外匯市場', cnews.money_udn('12017', '5616', date)],
             ['經濟日報-國際期貨', cnews.money_udn('11111', '11114', date)],
 
-            ['工商時報-產業', cnews.ctee(date, 'industry')],
-            ['工商時報-科技', cnews.ctee(date, 'tech')],
-            ['工商時報-國際', cnews.ctee(date, 'global')],
-            ['工商時報-兩岸', cnews.ctee(date, 'china')],
+            ['工商時報-財經', cnews.cteeV2(date, 'aj')],
+            ['工商時報-科技', cnews.cteeV2(date, 'kj')],
+            ['工商時報-國際', cnews.cteeV2(date, 'gj')],
+            ['工商時報-兩岸', cnews.cteeV2(date, 'lm')],
 
             ['鉅亨網-台股', cnews.cnyes(date, 'tw_stock')],
             ['鉅亨網-國際股', cnews.cnyes(date, 'wd_stock')],
