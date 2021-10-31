@@ -399,59 +399,12 @@ def technews_context(url):
 
     return soup.prettify()
 
-
-# 工商時報
-# https://ctee.com.tw/category/news/industry (產業)
-# https://ctee.com.tw/category/news/tech (科技)
-# https://ctee.com.tw/category/news/global (國際)
-# https://ctee.com.tw/category/news/china (兩岸)
-def ctee(end_date, type, timezone='Asia/Taipei'):
-    news = []
-    isRun = True
-    page = 1
-    tz = pytz.timezone(timezone)
-
-    while isRun:
-        if page >= LIMIT:
-            break
-
-        r = requests.get(
-            f"https://ctee.com.tw/category/news/{type}/page/{page}",
-            headers=HEADERS
-        )
-
-        if r.status_code != 200:
-            break
-
-        soup = BeautifulSoup(r.text, 'html.parser')
-
-        for v in soup.select('article'):
-            date = dt.fromtimestamp(parser.parse(v.find('time').attrs['datetime']).timestamp(), tz=tz).strftime(
-                '%Y-%m-%d %H:%M:%S')
-
-            if date <= end_date:
-                isRun = False
-                break
-
-            news.append({
-                'title': v.find('h2', class_='title').text.strip(),
-                'url': v.find('h2', class_='title').a.attrs['href'],
-                'date': date,
-            })
-
-        page = page + 1
-
-        time.sleep(1)
-
-    return news
-
-
 # 工商時報
 # https://ctee.com.tw/livenews/aj (財經)
 # https://ctee.com.tw/livenews/gj (國際)
 # https://ctee.com.tw/livenews/kj (科技)
 # https://ctee.com.tw/livenews/lm (兩岸)
-def cteeV2(end_date, type):
+def ctee(end_date, type):
     news = []
     isRun = True
     page = 1
@@ -473,7 +426,7 @@ def cteeV2(end_date, type):
 
         for v in soup.find_all(class_='item-content'):
             d = f"{year}/{v.find_all('a')[1].contents[1].text.replace('|', '').strip()}"
-            date = dt.fromtimestamp(parser.parse(d).timestamp(), tz=TIMEZONE).strftime('%Y-%m-%d %H:%M:%S')
+            date = dt.fromtimestamp(parser.parse(d).timestamp()).strftime('%Y-%m-%d %H:%M:%S')
 
             if date <= end_date:
                 isRun = False
