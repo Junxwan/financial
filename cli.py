@@ -18,7 +18,6 @@ import crawler.cb as cb
 import pandas as pd
 from api import line
 from bs4 import BeautifulSoup
-from dateutil import parser
 from models import models
 from sqlalchemy.orm import Session
 from sqlalchemy import create_engine
@@ -1404,48 +1403,88 @@ def line(config):
 
     log('start line')
 
-    # 接近cb調整轉換價
-    conversionPrice = session.execute(
-        ("SELECT cbs.code, cbs.name, cb_conversion_prices.date, cb_conversion_prices.value FROM cb_conversion_prices "
-         "JOIN cbs on cbs.id = cb_conversion_prices.cb_id "
-         "WHERE cb_conversion_prices.date = :date"),
-        {'date': (datetime.now() + timedelta(days=7)).strftime(f"%Y-%m-%d")}
-    ).all()
+    # 接近cb調整轉換價日期
+    def a():
+        conversionPrice = session.execute(
+            (
+                "SELECT cbs.code, cbs.name, cb_conversion_prices.date, cb_conversion_prices.value FROM cb_conversion_prices "
+                "JOIN cbs on cbs.id = cb_conversion_prices.cb_id "
+                "WHERE cb_conversion_prices.date = :date"),
+            {'date': (datetime.now() + timedelta(days=7)).strftime(f"%Y-%m-%d")}
+        ).all()
 
-    for v in conversionPrice:
-        message.append([
-            f"代碼: {v.code}", f"名稱: {v.name}", f"日期: {v.date}", f"調整轉換價: {v.value}"
-        ])
+        for v in conversionPrice:
+            message.append(f"代碼: {v.code}\n名稱: {v.name}\n調整日期: {v.date}\n調整轉換價: {v.value}")
 
-    # cb上市第六天
-    cbs = session.execute(
-        "SELECT id, code, name, publish_total_amount FROM cbs WHERE start_date between :start_date AND :end_date ",
-        {
-            'start_date': date,
-            'end_date': (datetime.now() + timedelta(days=10)).strftime(f"%Y-%m-%d"),
-        }
-    ).all()
+    # cb上市第六天開始拆解
+    def b():
+        cbs = session.execute(
+            "SELECT id, code, name, publish_total_amount FROM cbs WHERE start_date between :start_date AND :end_date ",
+            {
+                'start_date': date,
+                'end_date': (datetime.now() + timedelta(days=10)).strftime(f"%Y-%m-%d"),
+            }
+        ).all()
 
-    prices = session.execute("SELECT cb_id, count(1) as count FROM cb_prices WHERE cb_id IN :ids GROUP BY cb_id", {
-        'ids': [v.id for v in cbs]
-    }).all()
-
-    ids = [v.cb_id for v in prices if v.count == 6]
-    if len(ids) > 0:
-        prices = session.execute("SELECT cb_id, date, volume FROM cb_prices WHERE cb_id IN :ids AND date = :date", {
-            'ids': [v.cb_id for v in prices if v.count == 6],
-            'date': date,
+        prices = session.execute("SELECT cb_id, count(1) as count FROM cb_prices WHERE cb_id IN :ids GROUP BY cb_id", {
+            'ids': [v.id for v in cbs]
         }).all()
 
-        for v in prices:
-            for c in cbs:
-                if v.cb_id != c.id:
-                    continue
+        ids = [v.cb_id for v in prices if v.count == 6]
+        if len(ids) > 0:
+            prices = session.execute("SELECT cb_id, date, volume FROM cb_prices WHERE cb_id IN :ids AND date = :date", {
+                'ids': [v.cb_id for v in prices if v.count == 6],
+                'date': date,
+            }).all()
 
-                message.append([
-                    f"代碼: {c.code}", f"名稱: {c.name}", f"日期: {v.date}",
-                    f"預估cbas拆解: {round((v.volume / (c.publish_total_amount / 100000)) * 100)}%",
-                ])
+            for v in prices:
+                for c in cbs:
+                    if v.cb_id != c.id:
+                        continue
+
+                    message.append(
+                        f"代碼: {c.code}\n名稱: {c.name}\n日期: {v.date}\n預估cbas拆解: {round((v.volume / (c.publish_total_amount / 100000)) * 100)}%"
+                    )
+
+    # 突破轉換價
+    def c():
+        data = session.execute(
+            "SELECT code, name, date, close FROM cbs JOIN prices ON cbs.stock_id = prices.stock_id WHERE prices.date IN :date order by date",
+            {
+                'date': ['2021-02-18', '2021-02-17'],
+            }
+        ).all()
+
+        prices = {}
+        for v in data:
+            if v.code not in prices:
+                prices[v.code] = []
+
+            prices[v.code].append(v)
+
+        conversionPrice = {v.code: v for v in session.execute(
+            ("SELECT cbs.code, cbs.name, min(cb_conversion_prices.value) as value FROM cb_conversion_prices "
+             "JOIN cbs on cbs.id = cb_conversion_prices.cb_id and cbs.end_date > :date "
+             "WHERE cb_conversion_prices.date <= :date group by code"),
+            {'date': date}
+        ).all()}
+
+        for code, values in prices.items():
+            if len(values) != 2:
+                continue
+
+            if code not in conversionPrice:
+                continue
+
+            cp = conversionPrice[code].value
+            if values[0].close < cp and values[1].close >= cp:
+                message.append(
+                    f'代碼: {code}\n名稱: {values[0].name}\n日期: {date}\n收盤價: {values[1].close}\n突破轉換價: {cp}'
+                )
+
+    a()
+    b()
+    c()
 
     for m in message:
         notifyApi.sendCb(m)
