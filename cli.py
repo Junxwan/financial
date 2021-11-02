@@ -285,14 +285,14 @@ def month_revenue(year, month, outpath, save, config, notify):
 
 
 # 財報
-@cli.command('financial')
-@click.option('-y', '--year', default=0, help="年")
-@click.option('-q', '--season', default=0, help="季")
-@click.option('-o', '--outPath', type=click.Path(), help="輸出路徑")
-@click.option('-t', '--type', default='all', type=click.Choice(FINANCIAL_TYPE, case_sensitive=False), help="財報類型")
-@click.option('-s', '--save', default=False, type=click.BOOL, help="是否保存在database")
-@click.option('-c', '--config', type=click.STRING, help="config")
-@click.option('-n', '--notify', default=False, type=click.BOOL, help="通知")
+# @cli.command('financial')
+# @click.option('-y', '--year', default=0, help="年")
+# @click.option('-q', '--season', default=0, help="季")
+# @click.option('-o', '--outPath', type=click.Path(), help="輸出路徑")
+# @click.option('-t', '--type', default='all', type=click.Choice(FINANCIAL_TYPE, case_sensitive=False), help="財報類型")
+# @click.option('-s', '--save', default=False, type=click.BOOL, help="是否保存在database")
+# @click.option('-c', '--config', type=click.STRING, help="config")
+# @click.option('-n', '--notify', default=False, type=click.BOOL, help="通知")
 def get_financial(year, season, outpath, type, save, config, notify):
     result = []
 
@@ -312,7 +312,8 @@ def get_financial(year, season, outpath, type, save, config, notify):
             result = _get_financial(year, season, outpath, type)
 
         if save:
-            financial.imports('financial', year, quarterly=season, dir=outpath, d=db(file=config))
+            for v in list(set([v['date'] for v in result])):
+                financial.imports('financial', int(v[:4]), quarterly=int(v[5:6]), dir=outpath, d=db(file=config))
 
         if notify and len(result) > 0:
             s = ''
@@ -326,6 +327,9 @@ def get_financial(year, season, outpath, type, save, config, notify):
 
         if notify:
             setEmail(f"系統通知錯誤-季報", f"{e.__str__()}")
+
+
+get_financial(2021, 2, 'F:\data\csv', 'consolidated_income_statement', True, None, False)
 
 
 # 股利
