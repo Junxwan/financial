@@ -1436,7 +1436,7 @@ def line(config):
         data = session.execute(
             "SELECT code, name, date, close FROM cbs JOIN prices ON cbs.stock_id = prices.stock_id WHERE prices.date IN :date order by date",
             {
-                'date': ['2021-02-18', '2021-02-17'],
+                'date': [date, (datetime.now() - timedelta(days=1)).strftime(f"%Y-%m-%d")],
             }
         ).all()
 
