@@ -1415,37 +1415,21 @@ def line(config):
         ).all()
 
         for v in conversionPrice:
-            message.append(f"代碼: {v.code}\n名稱: {v.name}\n調整日期: {v.date}\n調整轉換價: {v.value}")
+            message.append(f"\n代碼: {v.code}\n名稱: {v.name}\n調整日期: {v.date}\n調整轉換價: {v.value}")
 
     # cb上市第六天開始拆解
     def b():
-        cbs = session.execute(
-            "SELECT id, code, name, publish_total_amount FROM cbs WHERE start_date between :start_date AND :end_date ",
-            {
-                'start_date': date,
-                'end_date': (datetime.now() + timedelta(days=10)).strftime(f"%Y-%m-%d"),
-            }
-        ).all()
+        s = (
+            "SELECT * FROM "
+            "(SELECT cbs.code, cbs.name, COUNT(cb_prices.date) AS count, cb_prices.date, cb_prices.volume, cbs.publish_total_amount "
+            "FROM cbs JOIN cb_prices ON cbs.id = cb_prices.cb_id GROUP BY cbs.id) as t "
+            "WHERE t.count = 6"
+        )
 
-        prices = session.execute("SELECT cb_id, count(1) as count FROM cb_prices WHERE cb_id IN :ids GROUP BY cb_id", {
-            'ids': [v.id for v in cbs]
-        }).all()
-
-        ids = [v.cb_id for v in prices if v.count == 6]
-        if len(ids) > 0:
-            prices = session.execute("SELECT cb_id, date, volume FROM cb_prices WHERE cb_id IN :ids AND date = :date", {
-                'ids': [v.cb_id for v in prices if v.count == 6],
-                'date': date,
-            }).all()
-
-            for v in prices:
-                for c in cbs:
-                    if v.cb_id != c.id:
-                        continue
-
-                    message.append(
-                        f"代碼: {c.code}\n名稱: {c.name}\n日期: {v.date}\n預估cbas拆解: {round((v.volume / (c.publish_total_amount / 100000)) * 100)}%"
-                    )
+        for v in session.execute(s).all():
+            message.append(
+                f"\n代碼: {v.code}\n名稱: {v.name}\n日期: {v.date}\n預估cbas拆解: {round((v.volume / (v.publish_total_amount / 100000)) * 100)}%"
+            )
 
     # 突破轉換價
     def c():
@@ -1480,12 +1464,61 @@ def line(config):
             cp = conversionPrice[code].value
             if values[0].close < cp and values[1].close >= cp:
                 message.append(
-                    f'代碼: {code}\n名稱: {values[0].name}\n日期: {date}\n收盤價: {values[1].close}\n突破轉換價: {cp}'
+                    f'\n代碼: {code}\n名稱: {values[0].name}\n日期: {date}\n收盤價: {values[1].close}\n突破轉換價: {cp}'
                 )
+
+    # 今天上市
+    def d():
+        for v in session.execute("SELECT code,name FROM cbs where :date = start_date", {'date': date}).all():
+            message.append(
+                f'\n代碼: {v.code}\n名稱: {v.name}\n日期: {date}\n今天上市'
+            )
+
+    # 開始轉換
+    def e():
+        for v in session.execute(
+                "SELECT code,name FROM cbs where :now >= start_conversion_date",
+                {'now': date, 'date': (datetime.now() - timedelta(days=1)).strftime(f"%Y-%m-%d")}).all():
+            message.append(
+                f'\n代碼: {v.code}\n名稱: {v.name}\n日期: {date}\n今天開始轉換'
+            )
+
+    # 上市一個月後
+    def f():
+        s = (
+            "SELECT * FROM "
+            "(SELECT cbs.code, cbs.name, TO_DAYS(:now) - TO_DAYS(start_date) AS b_day, TO_DAYS(:date) - TO_DAYS(start_date) AS b1_day "
+            "FROM cbs WHERE :now >= start_date AND :now < start_conversion_date) as t "
+            "WHERE t.b_day >= 30 and t.b1_day < 30"
+        )
+
+        for v in session.execute(s, {'now': date,
+                                     'date': (datetime.now() - timedelta(days=1)).strftime(f"%Y-%m-%d")}).all():
+            message.append(
+                f'\n代碼: {v.code}\n名稱: {v.name}\n日期: {date}\n上市一個月'
+            )
+
+    # 明天cbas開始拆解
+    def g():
+        s = (
+            "SELECT * FROM "
+            "(SELECT cbs.code, cbs.name, COUNT(cb_prices.date) AS count, cb_prices.date, cb_prices.volume, cbs.publish_total_amount "
+            "FROM cbs JOIN cb_prices ON cbs.id = cb_prices.cb_id GROUP BY cbs.id) as t "
+            "WHERE t.count = 5"
+        )
+
+        for v in session.execute(s).all():
+            message.append(
+                f"\n代碼: {v.code}\n名稱: {v.name}\n日期: {v.date}\n明天cbas開始拆解"
+            )
 
     a()
     b()
     c()
+    d()
+    e()
+    f()
+    g()
 
     for m in message:
         notifyApi.sendCb(m)
