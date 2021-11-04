@@ -1421,22 +1421,28 @@ def line(config):
     def b():
         s = (
             "SELECT * FROM "
-            "(SELECT cbs.code, cbs.name, COUNT(cb_prices.date) AS count, cb_prices.date, cb_prices.volume, cbs.publish_total_amount "
+            "(SELECT cbs.id, COUNT(cb_prices.date) AS count "
             "FROM cbs JOIN cb_prices ON cbs.id = cb_prices.cb_id GROUP BY cbs.id) as t "
             "WHERE t.count = 6"
         )
 
-        for v in session.execute(s).all():
+        for v in session.execute((
+                "SELECT cbs.code,cbs.name, cb_prices.volume, cbs.publish_total_amount "
+                "FROM cbs JOIN cb_prices ON cbs.id = cb_prices.cb_id where cb_prices.date = :date and cb_prices.cb_id IN :id "
+        ), {'date': date, 'id': [v.id for v in session.execute(s).all()]}).all():
             message.append(
-                f"\n代碼: {v.code}\n名稱: {v.name}\n日期: {v.date}\n預估cbas拆解: {round((v.volume / (v.publish_total_amount / 100000)) * 100)}%"
+                f"\n代碼: {v.code}\n名稱: {v.name}\n日期: {date}\n預估cbas拆解: {round((v.volume / (v.publish_total_amount / 100000)) * 100)}%"
             )
 
     # 突破轉換價
     def c():
+        yData = session.execute(
+            "SELECT date FROM prices GROUP BY date ORDER BY date DESC LIMIT 1 OFFSET 1").first().date.__str__()
+
         data = session.execute(
             "SELECT code, name, date, close FROM cbs JOIN prices ON cbs.stock_id = prices.stock_id WHERE prices.date IN :date order by date",
             {
-                'date': [date, (datetime.now() - timedelta(days=1)).strftime(f"%Y-%m-%d")],
+                'date': [date, yData],
             }
         ).all()
 
@@ -1477,7 +1483,7 @@ def line(config):
     # 開始轉換
     def e():
         for v in session.execute(
-                "SELECT code,name FROM cbs where :now >= start_conversion_date",
+                "SELECT code, name FROM cbs where :now >= start_conversion_date and :date < start_conversion_date",
                 {'now': date, 'date': (datetime.now() - timedelta(days=1)).strftime(f"%Y-%m-%d")}).all():
             message.append(
                 f'\n代碼: {v.code}\n名稱: {v.name}\n日期: {date}\n今天開始轉換'
