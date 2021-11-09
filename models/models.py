@@ -278,3 +278,13 @@ fundDetails = Table('fund_details', metadata,
                     Column('buy_amount', Integer),
                     Column('sell_amount', Integer),
                     )
+
+stockDispersion = Table('stock_dispersions', metadata,
+                        Column('id', Integer, primary_key=True),
+                        Column('date', Date),
+                        Column('stock_id', Integer),
+                        Column('level', Integer),
+                        Column('people', Integer),
+                        Column('stock', Integer),
+                        Column('rate', Float),
+                        )

@@ -1063,6 +1063,52 @@ def export(type, out, date, config):
     elif (type == 'price'):
         csv.price(date, out, d)
 
+    # cb價格分位數
+    elif (type == 'cb_price_quartile'):
+        data = []
+        session = Session(d)
+        s = (
+            "SELECT * FROM ( "
+            "SELECT close, @curRow:=@curRow + 1 AS number FROM cb_prices WHERE cb_id = :id ORDER BY close DESC "
+            ") as p "
+            "WHERE p.number IN (1 , ROUND(@curRow / 2), ROUND(@curRow / 4));"
+        )
+
+        for v in session.execute("SELECT id, code, name, start_date FROM cbs").all():
+            session.execute("SET @curRow = 0;")
+            close = [v.close for v in session.execute(s, {'id': v.id}).all()]
+
+            if len(close) == 3:
+                data.append([v.code, v.name, v.start_date] + close)
+
+        pd.DataFrame(data, columns=['code', 'name', 'start_date', 'max', 'sec', 'avg']).to_csv(
+            os.path.join(out, 'cb_price_quartile.csv'),
+            index=False,
+            encoding='utf_8_sig')
+
+    # cbas價格分位數
+    elif (type == 'cbas_quartile'):
+        data = []
+        session = Session(d)
+        s = (
+            "SELECT * FROM ( "
+            "SELECT close, @curRow:=@curRow + 1 AS number FROM cb_prices WHERE cb_id = :id ORDER BY date "
+            ") as p "
+            "WHERE p.number = 6;"
+        )
+
+        for v in session.execute("SELECT id, code, name, start_date FROM cbs").all():
+            session.execute("SET @curRow = 0;")
+            d = session.execute(s, {'id': v.id}).first()
+
+            if d is not None:
+                data.append([v.code, v.name, v.start_date, d.close])
+
+        pd.DataFrame(data, columns=['code', 'name', 'start_date', 'close']).to_csv(
+            os.path.join(out, 'cbas_quartile.csv'),
+            index=False,
+            encoding='utf_8_sig')
+
 
 # 可轉債
 @cli.command('cb')
@@ -1393,11 +1439,62 @@ def stock(notify, config):
             setEmail(f"系統通知錯誤 最近上市上櫃個股", f"{e.__str__()}")
 
 
+@cli.command('stock_dispersion')
+@click.option('-n', '--notify', default=False, type=click.BOOL, help="通知")
+@click.option('-c', '--config', type=click.STRING, help="config")
+def stockDispersion(notify, config):
+    d = db(file=config)
+    session = Session(d)
+    codes = {v.code: v.id for v in session.execute("SELECT id, code from stocks")}
+    insert = []
+
+    data = twse.stock_dispersion()
+    date = str(data.iloc[0]['資料日期'])
+    date = f"{date[:4]}-{date[4:6]}-{date[6:8]}"
+
+    if session.execute("SELECT COUNT(1) as count FROM stock_dispersions WHERE date = :date",
+                       {'date': date}).first().count > 0:
+        return None
+
+    for code, value in data.groupby('證券代號'):
+        if code not in codes:
+            continue
+
+        for _, v in value.iterrows():
+            i = v['持股分級']
+            if i == 16:
+                continue
+
+            if i == 17:
+                i = i - 1
+
+            insert.append({
+                'stock_id': codes[code],
+                'date': date,
+                'level': i,
+                'people': v['人數'],
+                'stock': v['股數'],
+                'rate': v['占集保庫存數比例%'],
+            })
+
+    if len(insert) > 0:
+        result = session.execute(models.stockDispersion.insert(), insert)
+        if result.is_insert == False or result.rowcount != len(insert):
+            logging.error(f"save stock dispersion count:{len(insert)}")
+            return False
+        else:
+            logging.info(f"save stock dispersion count:{len(insert)}")
+            session.commit()
+
+            if notify:
+                notifyApi.sendSystem("執行完股權分散表")
+
+
 # line通知
 @cli.command('line')
 @click.option('-c', '--config', type=click.STRING, help="config")
 def line(config):
-    date = datetime.now().strftime(f"%Y-%m-%d")
+    date = datetime.now().strftime('%Y-%m-%d')
     d = db(file=config)
     session = Session(d)
     message = []
@@ -1518,6 +1615,36 @@ def line(config):
                 f"\n代碼: {v.code}\n名稱: {v.name}\n日期: {v.date}\n明天cbas開始拆解"
             )
 
+    # 週轉換
+    def h():
+        now = datetime.now()
+        week5Day = (now + timedelta(days=4 - now.weekday()))
+        yWeek5Day = (week5Day - timedelta(days=7))
+
+        if date != week5Day.strftime('%Y-%m-%d'):
+            return
+
+        s = (
+            "SELECT cbs.code, cbs.name, GROUP_CONCAT(stock order by date desc) as stock "
+            "FROM stock_dispersions JOIN cbs ON cbs.stock_id = stock_dispersions.stock_id "
+            "WHERE stock_dispersions.date IN :dates "
+            "AND stock_dispersions.level = 16 "
+            "AND cbs.start_date <= :date "
+            "AND cbs.end_date >= :date "
+            "GROUP BY cbs.id ORDER BY cbs.code"
+        )
+
+        for v in session.execute(s, {'dates': [week5Day.strftime('%Y-%m-%d'), yWeek5Day.strftime('%Y-%m-%d')],
+                                     'date': date}).all():
+            stock = v.stock.split(',')
+            if len(stock) != 2:
+                continue
+
+            if int(stock[0]) > int(stock[1]):
+                message.append(
+                    f"\n代碼: {v.code}\n名稱: {v.name}\n日期: {date}\n集保戶庫數增加: {round((int(stock[0]) - int(stock[1])) / 1000)}張"
+                )
+
     a()
     b()
     c()
@@ -1525,6 +1652,7 @@ def line(config):
     e()
     f()
     g()
+    h()
 
     for m in message:
         notifyApi.sendCb(m)

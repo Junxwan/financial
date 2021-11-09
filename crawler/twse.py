@@ -917,3 +917,16 @@ def ipo():
         time.sleep(6)
 
     return data
+
+
+# 股權分散表
+def stock_dispersion():
+    r = requests.get(
+        "https://smart.tdcc.com.tw/opendata/getOD.ashx?id=1-5",
+        headers=HEADERS
+    )
+
+    if r.status_code != 200:
+        return None
+
+    return pd.read_csv(StringIO(r.text), encoding='big5-hkscs')
