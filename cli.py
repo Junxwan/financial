@@ -488,6 +488,49 @@ def price(type, path, config, notify):
         notifyApi.sendSystem(f"執行完 {type} 股價")
 
 
+# 籌碼
+@cli.command('bargaining_chip')
+@click.option('-c', '--config', type=click.STRING, help="config")
+@click.option('-n', '--notify', default=False, type=click.BOOL, help="通知")
+def bargaining_chip(config, notify):
+    try:
+        session = Session(db(file=config))
+        date = session.execute("SELECT date FROM prices ORDER BY date desc limit 1").first().date
+        stock = {v.code: v.id for v in session.execute("SELECT id, code FROM stocks").all()}
+        update = []
+
+        for v in twse.credit_transaction(date.year, date.month, date.day):
+            if v['code'] not in stock:
+                continue
+
+            if v['securities_lending_repay'] > 0:
+                update.append(f"WHEN {stock[v['code']]} THEN {v['securities_lending_repay']}")
+
+        if len(update) == 0:
+            return
+
+        result = session.execute(
+            "UPDATE prices set securities_lending_repay = (CASE stock_id " + " ".join(
+                update) + " ELSE securities_lending_repay END) WHERE date = :date",
+            {'date': date.__str__()}
+        )
+
+        if result.rowcount != 1:
+            log(f"update bargaining_chip count:{len(update)}")
+            session.commit()
+
+            if notify == True:
+                notifyApi.sendSystem('執行收集籌碼')
+        else:
+            error(f"update bargaining_chip count:{len(update)}")
+
+    except Exception as e:
+        error(f"stock dispersion error {e.__str__()}")
+
+        if notify == True:
+            setEmail(f"系統通知錯誤 股權分散表", f"{e.__str__()}")
+
+
 # tag產業指數
 @cli.command('tag_exponent')
 @click.option('-t', '--code', multiple=True, type=click.STRING, help="code")
@@ -1109,6 +1152,72 @@ def export(type, out, date, config):
             index=False,
             encoding='utf_8_sig')
 
+    # cb餘額發行後第幾個月開始減少到一定趴數
+    elif (type == 'cb_balances'):
+        data = []
+        session = Session(d)
+        s = (
+            "SELECT GROUP_CONCAT(b_rate) as rate FROM ( "
+            "SELECT cb_balances.year,cb_balances.month,cb_balances.balance, "
+            "ROUND((cb_balances.balance / (cbs.publish_total_amount / 100000)) * 100) AS b_rate "
+            "FROM cb_balances JOIN cbs ON cb_balances.cb_id = cbs.id WHERE cb_id = :id "
+            "ORDER BY cb_balances.year , cb_balances.month) as b;"
+        )
+
+        for v in session.execute("SELECT id, code, name, start_date FROM cbs").all():
+            d = session.execute(s, {'id': v.id}).first()
+
+            if d is not None and d.rate is not None:
+                b90 = 0
+                b50 = 0
+
+                for i, b in enumerate(d.rate.split(',')):
+                    b = int(b)
+                    # 第一次剩餘90%以下
+                    if b90 == 0 and b <= 90:
+                        b90 = i
+
+                    # 第一次剩餘50%以下
+                    if b50 == 0 and b <= 50:
+                        b50 = i
+
+                data.append([v.code, v.name, v.start_date, b90, b50])
+
+        pd.DataFrame(data, columns=['code', 'name', 'start_date', 'b90', 'b50']).to_csv(
+            os.path.join(out, 'cb_balances.csv'),
+            index=False,
+            encoding='utf_8_sig')
+
+    elif (type == 'cb_price_premium_quantile'):
+        data = {
+            'cb_close': [],
+            'off_price': [],
+        }
+
+        rang = [
+            [1000, 140], [140, 130], [130, 120], [120, 115], [115, 110], [110, 105],
+            [105, 100], [100, 95], [95, 90], [90, 80], [80, 0]
+        ]
+
+        columns = ['code', 'name', 'start_date']
+        for r in rang:
+            columns += [f"1_{r[0]}~{r[1]}", f"0.90_{r[0]}~{r[1]}", f"0.75_{r[0]}~{r[1]}", f"0.50_{r[0]}~{r[1]}"]
+
+        for v in d.execute("SELECT id, code, name, start_date FROM cbs order by start_date").all():
+            for name, quantile in cb.priceQuantile(v.code, rang).items():
+                c = [v.code, v.name, v.start_date]
+                for qs in quantile:
+                    c += qs
+
+                data[name].append(c)
+
+        for name, value in data.items():
+            pd.DataFrame(value, columns=columns).to_csv(
+                os.path.join(out, f'{name}_premium_quantile.csv'),
+                index=False,
+                encoding='utf_8_sig'
+            )
+
 
 # 可轉債
 @cli.command('cb')
@@ -1189,6 +1298,7 @@ def cbs(type, code, year, month, start_ym, end_ym, notify, config):
                  ).all()}
 
         balance = cb.balance(year, month)
+        balance2 = cb.stock()
         diff = set(balance.keys()).difference(exist.keys())
         insert = []
 
@@ -1197,6 +1307,12 @@ def cbs(type, code, year, month, start_ym, end_ym, notify, config):
                 continue
 
             value = balance[code]
+            value2 = balance2[balance2['可轉換公司債代號'] == int(code)]
+            people = 0
+            m = "%02d" % month
+
+            if len(value2) > 0 and str(value2.iloc[0]['資料年月']) == f'{year - 1911}{m}':
+                people = value2.iloc[0]['集保股東戶數']
 
             insert.append({
                 'cb_id': cbs[code],
@@ -1206,6 +1322,7 @@ def cbs(type, code, year, month, start_ym, end_ym, notify, config):
                 'balance': value['balance'],
                 'change_stock': value['change_stock'],
                 'balance_stock': value['balance_stock'],
+                'people': people,
             })
 
         if len(insert) > 0:
@@ -1439,55 +1556,62 @@ def stock(notify, config):
             setEmail(f"系統通知錯誤 最近上市上櫃個股", f"{e.__str__()}")
 
 
+# 股權分散表
 @cli.command('stock_dispersion')
 @click.option('-n', '--notify', default=False, type=click.BOOL, help="通知")
 @click.option('-c', '--config', type=click.STRING, help="config")
 def stockDispersion(notify, config):
-    d = db(file=config)
-    session = Session(d)
-    codes = {v.code: v.id for v in session.execute("SELECT id, code from stocks")}
-    insert = []
+    try:
+        d = db(file=config)
+        session = Session(d)
+        codes = {v.code: v.id for v in session.execute("SELECT id, code from stocks")}
+        insert = []
 
-    data = twse.stock_dispersion()
-    date = str(data.iloc[0]['資料日期'])
-    date = f"{date[:4]}-{date[4:6]}-{date[6:8]}"
+        data = twse.stock_dispersion()
+        date = str(data.iloc[0]['資料日期'])
+        date = f"{date[:4]}-{date[4:6]}-{date[6:8]}"
 
-    if session.execute("SELECT COUNT(1) as count FROM stock_dispersions WHERE date = :date",
-                       {'date': date}).first().count > 0:
-        return None
+        if session.execute("SELECT COUNT(1) as count FROM stock_dispersions WHERE date = :date",
+                           {'date': date}).first().count > 0:
+            return None
 
-    for code, value in data.groupby('證券代號'):
-        if code not in codes:
-            continue
-
-        for _, v in value.iterrows():
-            i = v['持股分級']
-            if i == 16:
+        for code, value in data.groupby('證券代號'):
+            if code not in codes:
                 continue
 
-            if i == 17:
-                i = i - 1
+            for _, v in value.iterrows():
+                i = v['持股分級']
+                if i == 16:
+                    continue
 
-            insert.append({
-                'stock_id': codes[code],
-                'date': date,
-                'level': i,
-                'people': v['人數'],
-                'stock': v['股數'],
-                'rate': v['占集保庫存數比例%'],
-            })
+                if i == 17:
+                    i = i - 1
 
-    if len(insert) > 0:
-        result = session.execute(models.stockDispersion.insert(), insert)
-        if result.is_insert == False or result.rowcount != len(insert):
-            logging.error(f"save stock dispersion count:{len(insert)}")
-            return False
-        else:
-            logging.info(f"save stock dispersion count:{len(insert)}")
-            session.commit()
+                insert.append({
+                    'stock_id': codes[code],
+                    'date': date,
+                    'level': i,
+                    'people': v['人數'],
+                    'stock': v['股數'],
+                    'rate': v['占集保庫存數比例%'],
+                })
 
-            if notify:
-                notifyApi.sendSystem("執行完股權分散表")
+        if len(insert) > 0:
+            result = session.execute(models.stockDispersion.insert(), insert)
+            if result.is_insert == False or result.rowcount != len(insert):
+                logging.error(f"save stock dispersion count:{len(insert)}")
+                return False
+            else:
+                logging.info(f"save stock dispersion count:{len(insert)}")
+                session.commit()
+
+                if notify == True:
+                    notifyApi.sendSystem("執行完股權分散表")
+    except Exception as e:
+        error(f"stock dispersion error {e.__str__()}")
+
+        if notify == True:
+            setEmail(f"系統通知錯誤 股權分散表", f"{e.__str__()}")
 
 
 # line通知

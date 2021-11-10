@@ -294,3 +294,35 @@ def price(year, month):
         time.sleep(6)
 
     return data
+
+
+# 同餘額但有股東人數
+# https://smart.tdcc.com.tw/opendata/getOD.ashx?id=2-8
+def stock():
+    r = requests.get("https://smart.tdcc.com.tw/opendata/getOD.ashx?id=2-8", headers=HEADERS)
+    r.encoding = 'utf-8'
+    return pd.read_csv(StringIO(r.text), encoding='big5-hkscs')
+
+
+# 理論與市價區間折溢價分位數
+def priceQuantile(code, rang):
+    quantile = {
+        'cb_close': [],
+        'off_price': [],
+    }
+
+    r = requests.get(f"http://ec2-18-237-97-27.us-west-2.compute.amazonaws.com:54657/cb/price/{code}/premium")
+    data = pd.DataFrame(r.json()['data'])
+
+    for r in rang:
+        for n in ['cb_close', 'off_price']:
+            if len(data) == 0:
+                q = ['', '', '', '']
+            else:
+                q = list(
+                    data.loc[lambda df: (df[n] < r[0]) & (df[n] >= r[1]), :]['premium'].quantile([1, 0.9, 0.75, 0.5])
+                )
+
+            quantile[n].append(q)
+
+    return quantile

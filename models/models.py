@@ -241,6 +241,7 @@ cbBalance = Table('cb_balances', metadata,
                   Column('balance', Integer),
                   Column('change_stock', Integer),
                   Column('balance_stock', Integer),
+                  Column('people', Integer),
                   )
 
 cbPrice = Table('cb_prices', metadata,

@@ -65,3 +65,6 @@ stock:
 # Line新聞
 line_new:
 		$(CLI) line-news -n $(NOTIFY)
+
+stock_dispersion:
+		$(CLI) stock_dispersion -n $(NOTIFY)

@@ -930,3 +930,41 @@ def stock_dispersion():
         return None
 
     return pd.read_csv(StringIO(r.text), encoding='big5-hkscs')
+
+
+# 信用交易資料
+def credit_transaction(year, month, day):
+    data = []
+
+    m = "%02d" % month
+    d = "%02d" % day
+
+    r = requests.get(
+        f"https://www.tpex.org.tw/web/stock/margin_trading/margin_balance/margin_bal_result.php?l=zh-tw&o=json&d={year - 1911}/{m}/{d}&_={time.time() * 1000}",
+        headers=HEADERS
+    )
+
+    otc = r.json()
+
+    time.sleep(3)
+
+    r = requests.get(
+        f"https://www.twse.com.tw/exchangeReport/MI_MARGN?response=json&date={year}{m}{d}&selectType=ALL&_={time.time() * 1000}",
+        headers=HEADERS
+    )
+
+    twse = r.json()
+
+    for v in otc['aaData']:
+        data.append({
+            'code': v[0],
+            'securities_lending_repay': int(v[13].replace(",", "")),
+        })
+
+    for v in twse['data']:
+        data.append({
+            'code': v[0],
+            'securities_lending_repay': int(v[10].replace(",", "")),
+        })
+
+    return data
