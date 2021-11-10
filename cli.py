@@ -1656,13 +1656,16 @@ def line(config):
             "WHERE t.count = 6"
         )
 
-        for v in session.execute((
-                "SELECT cbs.code,cbs.name, cb_prices.volume, cbs.publish_total_amount "
-                "FROM cbs JOIN cb_prices ON cbs.id = cb_prices.cb_id where cb_prices.date = :date and cb_prices.cb_id IN :id "
-        ), {'date': date, 'id': [v.id for v in session.execute(s).all()]}).all():
-            message.append(
-                f"\n代碼: {v.code}\n名稱: {v.name}\n日期: {date}\n預估cbas拆解: {round((v.volume / (v.publish_total_amount / 100000)) * 100)}%"
-            )
+        ids = [v.id for v in session.execute(s).all()]
+
+        if len(ids) > 0:
+            for v in session.execute((
+                    "SELECT cbs.code,cbs.name, cb_prices.volume, cbs.publish_total_amount "
+                    "FROM cbs JOIN cb_prices ON cbs.id = cb_prices.cb_id where cb_prices.date = :date and cb_prices.cb_id IN :id "
+            ), {'date': date, 'id': ids}).all():
+                message.append(
+                    f"\n代碼: {v.code}\n名稱: {v.name}\n日期: {date}\n預估cbas拆解: {round((v.volume / (v.publish_total_amount / 100000)) * 100)}%"
+                )
 
     # 突破轉換價
     def c():
