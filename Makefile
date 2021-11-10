@@ -73,3 +73,7 @@ stock_dispersion:
 # 籌碼
 bargaining_chip:
 		$(CLI) bargaining_chip -n $(NOTIFY)
+
+# Line通知
+line:
+	$(CLI) line

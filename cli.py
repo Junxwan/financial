@@ -525,19 +525,19 @@ def bargaining_chip(date, config, notify):
         )
 
         if result.rowcount != 1:
-            log(f"update bargaining_chip count:{len(update)}")
+            log(f"update bargaining_chip {date} count:{len(update)}")
             session.commit()
 
             if notify == True:
                 notifyApi.sendSystem('執行收集籌碼')
         else:
-            error(f"update bargaining_chip count:{len(update)}")
+            error(f"update bargaining_chip {date} count:{len(update)}")
 
     except Exception as e:
-        error(f"stock dispersion error {e.__str__()}")
+        error(f"update bargaining_chip {date} error {e.__str__()}")
 
         if notify == True:
-            setEmail(f"系統通知錯誤 股權分散表", f"{e.__str__()}")
+            setEmail(f"系統通知錯誤 {date} 籌碼", f"{e.__str__()}")
 
 
 # tag產業指數
