@@ -66,5 +66,10 @@ stock:
 line_new:
 		$(CLI) line-news -n $(NOTIFY)
 
+# 股權分散表
 stock_dispersion:
 		$(CLI) stock_dispersion -n $(NOTIFY)
+
+# 籌碼
+bargaining_chip:
+		$(CLI) bargaining_chip -n $(NOTIFY)

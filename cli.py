@@ -22,6 +22,7 @@ from models import models
 from sqlalchemy.orm import Session
 from sqlalchemy import create_engine
 from configparser import ConfigParser
+from dateutil import parser
 from datetime import datetime, timedelta
 from xlsx import twse as xtwse, financial, export as csv, fund
 from jinja2 import Template
@@ -58,6 +59,8 @@ EXPONENT = ['TSE', 'OTC', 'TSE_INDUSTRY', 'OTC_INDUSTRY', 'XQ_INDUSTRY']
 
 year = datetime.now().year
 month = datetime.now().month
+
+TIMEZONE = pytz.timezone('Asia/Taipei')
 
 if month == 1:
     month = 12
@@ -490,12 +493,18 @@ def price(type, path, config, notify):
 
 # 籌碼
 @cli.command('bargaining_chip')
+@click.option('-d', '--date', type=click.STRING, help="date")
 @click.option('-c', '--config', type=click.STRING, help="config")
 @click.option('-n', '--notify', default=False, type=click.BOOL, help="通知")
-def bargaining_chip(config, notify):
+def bargaining_chip(date, config, notify):
     try:
         session = Session(db(file=config))
-        date = session.execute("SELECT date FROM prices ORDER BY date desc limit 1").first().date
+
+        if date is None:
+            date = session.execute("SELECT date FROM prices ORDER BY date desc limit 1").first().date
+        else:
+            date = datetime.fromtimestamp(parser.parse(date).timestamp(), tz=TIMEZONE)
+
         stock = {v.code: v.id for v in session.execute("SELECT id, code FROM stocks").all()}
         update = []
 
