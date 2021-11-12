@@ -6,6 +6,7 @@ import logging
 import smtplib
 import pytz
 import calendar
+import asyncio
 import pymysql
 import eml_parser
 import requests
@@ -19,6 +20,7 @@ import pandas as pd
 from api import line
 from bs4 import BeautifulSoup
 from models import models
+
 from sqlalchemy.orm import Session
 from sqlalchemy import create_engine
 from configparser import ConfigParser
@@ -1792,6 +1794,44 @@ def line(config):
 
     for m in message:
         notifyApi.sendCb(m)
+
+
+@cli.command('google_new')
+@click.option('-k', '--key', type=click.STRING, help="key word")
+@click.option('-u', '--url', type=click.STRING, help="url")
+@click.option('-n', '--num', default=30, type=click.INT, help="url")
+@click.option('-s', '--save', type=click.STRING, help="save path")
+def google_new(key, url, num, save):
+    news = asyncio.get_event_loop().run_until_complete(cnews.google_news(key, url, num=num))  # 调用
+    data = pd.DataFrame([[v['title'], v['date'], v['url']] for v in news], columns=['title', 'date', 'url'])
+    data['date'] = pd.to_datetime(data.date)
+    data = data.sort_values(by='date')
+
+    if save is not None:
+        td = []
+        for i, v in data.iterrows():
+            td.append((
+                    f"<tr><td>{v['date']}</td>"
+                    '<td><a href="' + v['url'] + '" target="_blank">' + v['title'] + '</a></td></tr>'
+            ))
+
+        html = ('<table border="1" class="dataframe">'
+                '<thead>'
+                '<tr style="text-align: right;">'
+                "<th width='20%'>title</th>"
+                "<th width='80%'>date</th>"
+                '</tr>'
+                '</thead>'
+                '<tbody>'
+                + "".join(td) +
+                '</tbody>'
+                '</table>')
+
+        f = open(os.path.join(save, 'news.html'), "w")
+        f.write(html)
+        f.close()
+    else:
+        print(news)
 
 
 if __name__ == '__main__':

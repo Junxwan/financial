@@ -905,7 +905,7 @@ def digitimes_context(url):
 
     return BeautifulSoup(r.text, 'html.parser').find('div', id='newsText').prettify()
 
-
+# google news
 async def google_news(keyWord, url, num=30):
     news = []
     browser = await launch()
@@ -915,6 +915,8 @@ async def google_news(keyWord, url, num=30):
 
         if url is None:
             break
+
+        print(f'google new page {i} news {len(news)}')
 
         await page.goto(url)
         soup = BeautifulSoup(await page.content(), 'html.parser')
@@ -931,12 +933,14 @@ async def google_news(keyWord, url, num=30):
                 t = meta.soup.find('time').attrs['datetime']
             elif hostName == 'money.udn.com':
                 t = meta.metadata['meta']['date']
-            elif hostName in ['finance.ettoday.net', 'www.chinatimes.com']:
+            elif hostName in ['finance.ettoday.net', 'www.chinatimes.com', 'wantrich.chinatimes.com']:
                 t = meta.metadata['meta']['pubdate']
             elif hostName == 'www.bnext.com.tw':
                 t = meta.metadata['meta']['my:date']
             elif hostName == 'www.cna.com.tw':
                 t = f"{meta.soup.find(class_='updatetime').text}:00"
+            elif hostName == 'www.moneydj.com':
+                t = f"{meta.soup.find(id='MainContent_Contents_lbDate').text}:00"
             else:
                 t = meta.metadata['meta']['article:published_time']
 
@@ -957,5 +961,4 @@ async def google_news(keyWord, url, num=30):
                 url = None
 
     await browser.close()
-
     return news
