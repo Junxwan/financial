@@ -909,57 +909,62 @@ def digitimes_context(url):
 # google news
 async def google_news(keyWord, url, num=30):
     news = []
-    browser = await launch()
+    browser = await launch(timeout=300000)
+    u = ''
 
-    for i in range(num):
-        page = await browser.newPage()
+    try:
+        for i in range(num):
+            page = await browser.newPage()
 
-        if url is None:
-            break
-
-        print(f'google new page {i + 1} news {len(news)}')
-
-        await page.goto(url)
-        soup = BeautifulSoup(await page.content(), 'html.parser')
-        for html in soup.find_all(class_='ftSUBd'):
-            title = str(html.find(class_='iRPxbe').contents[2].text)
-            if title.find(keyWord) < 0:
-                continue
-
-            u = html.find('a').attrs['href']
-            meta = metadata_parser.MetadataParser(url=u, url_headers=HEADERS)
-
-            hostName = urllib.parse.urlparse(u).hostname
-            if hostName == 'tw.stock.yahoo.com':
-                t = meta.soup.find('time').attrs['datetime']
-            elif hostName == 'money.udn.com':
-                t = meta.metadata['meta']['date']
-            elif hostName in ['finance.ettoday.net', 'www.chinatimes.com', 'wantrich.chinatimes.com']:
-                t = meta.metadata['meta']['pubdate']
-            elif hostName == 'www.bnext.com.tw':
-                t = meta.metadata['meta']['my:date']
-            elif hostName == 'www.cna.com.tw':
-                t = f"{meta.soup.find(class_='updatetime').text}:00"
-            elif hostName == 'www.moneydj.com':
-                t = f"{meta.soup.find(id='MainContent_Contents_lbDate').text}:00"
-            else:
-                t = meta.metadata['meta']['article:published_time']
-
-            news.append({
-                'url': u,
-                'title': title,
-                'date': parser.parse(t).strftime('%Y-%m-%d %H:%M:%S'),
-            })
-
-            time.sleep(2)
-
-        for p in soup.find(class_='AaVjTc').find_all('a'):
-            if p.text.isnumeric() and int(p.text) == i + 2:
-                url = "https://www.google.com" + p.attrs['href']
-                time.sleep(5)
+            if url is None:
                 break
-            else:
-                url = None
+
+            await page.goto(url)
+            soup = BeautifulSoup(await page.content(), 'html.parser')
+            for html in soup.find_all(class_='ftSUBd'):
+                title = str(html.find(class_='iRPxbe').contents[2].text)
+                if title.find(keyWord) < 0:
+                    continue
+
+                u = html.find('a').attrs['href']
+                meta = metadata_parser.MetadataParser(url=u, url_headers=HEADERS)
+
+                hostName = urllib.parse.urlparse(u).hostname
+                if hostName in ['tw.stock.yahoo.com', 'tw.yahoo.com']:
+                    t = meta.soup.find('time').attrs['datetime']
+                elif hostName == 'money.udn.com':
+                    t = meta.metadata['meta']['date']
+                elif hostName in ['finance.ettoday.net', 'www.chinatimes.com', 'wantrich.chinatimes.com']:
+                    t = meta.metadata['meta']['pubdate']
+                elif hostName == 'www.bnext.com.tw':
+                    t = meta.metadata['meta']['my:date']
+                elif hostName == 'www.cna.com.tw':
+                    t = f"{meta.soup.find(class_='updatetime').text}:00"
+                elif hostName == 'www.moneydj.com':
+                    t = f"{meta.soup.find(id='MainContent_Contents_lbDate').text}:00"
+                else:
+                    t = meta.metadata['meta']['article:published_time']
+
+                news.append({
+                    'url': u,
+                    'title': title,
+                    'date': parser.parse(t).strftime('%Y-%m-%d %H:%M:%S'),
+                })
+
+                time.sleep(2)
+
+            for p in soup.find(class_='AaVjTc').find_all('a'):
+                if p.text.isnumeric() and int(p.text) == i + 2:
+                    url = "https://www.google.com" + p.attrs['href']
+                    time.sleep(5)
+                    break
+                else:
+                    url = None
+
+            print(f'google new page {i + 1} news {len(news)}')
+
+    except Exception as e:
+        print(f'google new page error: {e.__str__()} url: {u}')
 
     await browser.close()
     return news

@@ -1802,7 +1802,7 @@ def line(config):
 @click.option('-n', '--num', default=30, type=click.INT, help="url")
 @click.option('-s', '--save', type=click.STRING, help="save path")
 def google_new(key, url, num, save):
-    news = asyncio.get_event_loop().run_until_complete(cnews.google_news(key, url, num=num))  # 调用
+    news = asyncio.get_event_loop().run_until_complete(cnews.google_news(key, url, num=num))
     data = pd.DataFrame([[v['title'], v['date'], v['url']] for v in news], columns=['title', 'date', 'url'])
     data['date'] = pd.to_datetime(data.date)
     data = data.sort_values(by='date')
@@ -1827,7 +1827,7 @@ def google_new(key, url, num, save):
                 '</tbody>'
                 '</table>')
 
-        f = open(os.path.join(save, 'news.html'), "w")
+        f = open(os.path.join(save, f'{key}-news.html'), "w")
         f.write(html)
         f.close()
     else:
