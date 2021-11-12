@@ -905,6 +905,7 @@ def digitimes_context(url):
 
     return BeautifulSoup(r.text, 'html.parser').find('div', id='newsText').prettify()
 
+
 # google news
 async def google_news(keyWord, url, num=30):
     news = []
@@ -916,7 +917,7 @@ async def google_news(keyWord, url, num=30):
         if url is None:
             break
 
-        print(f'google new page {i} news {len(news)}')
+        print(f'google new page {i + 1} news {len(news)}')
 
         await page.goto(url)
         soup = BeautifulSoup(await page.content(), 'html.parser')
