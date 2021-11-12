@@ -1,12 +1,16 @@
 import json
 import requests
+import metadata_parser
 import time
+import asyncio
 import feedparser
 import pytz
+import urllib.parse
 from datetime import datetime as dt
 from datetime import timedelta
 from dateutil import parser
 from bs4 import BeautifulSoup
+from pyppeteer import launch
 
 USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/85.0.4183.83 Safari/537.36'
 
@@ -398,6 +402,7 @@ def technews_context(url):
         return None
 
     return soup.prettify()
+
 
 # 工商時報
 # https://ctee.com.tw/livenews/aj (財經)
@@ -899,3 +904,58 @@ def digitimes_context(url):
         return None
 
     return BeautifulSoup(r.text, 'html.parser').find('div', id='newsText').prettify()
+
+
+async def google_news(keyWord, url, num=30):
+    news = []
+    browser = await launch()
+
+    for i in range(num):
+        page = await browser.newPage()
+
+        if url is None:
+            break
+
+        await page.goto(url)
+        soup = BeautifulSoup(await page.content(), 'html.parser')
+        for html in soup.find_all(class_='ftSUBd'):
+            title = str(html.find(class_='iRPxbe').contents[2].text)
+            if title.find(keyWord) < 0:
+                continue
+
+            u = html.find('a').attrs['href']
+            meta = metadata_parser.MetadataParser(url=u, url_headers=HEADERS)
+
+            hostName = urllib.parse.urlparse(u).hostname
+            if hostName == 'tw.stock.yahoo.com':
+                t = meta.soup.find('time').attrs['datetime']
+            elif hostName == 'money.udn.com':
+                t = meta.metadata['meta']['date']
+            elif hostName in ['finance.ettoday.net', 'www.chinatimes.com']:
+                t = meta.metadata['meta']['pubdate']
+            elif hostName == 'www.bnext.com.tw':
+                t = meta.metadata['meta']['my:date']
+            elif hostName == 'www.cna.com.tw':
+                t = f"{meta.soup.find(class_='updatetime').text}:00"
+            else:
+                t = meta.metadata['meta']['article:published_time']
+
+            news.append({
+                'url': u,
+                'title': title,
+                'date': parser.parse(t).strftime('%Y-%m-%d %H:%M:%S'),
+            })
+
+            time.sleep(2)
+
+        for p in soup.find(class_='AaVjTc').find_all('a'):
+            if p.text.isnumeric() and int(p.text) == i + 2:
+                url = "https://www.google.com" + p.attrs['href']
+                time.sleep(5)
+                break
+            else:
+                url = None
+
+    await browser.close()
+
+    return news
