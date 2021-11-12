@@ -1805,7 +1805,7 @@ def google_new(key, url, num, save):
     news = asyncio.get_event_loop().run_until_complete(cnews.google_news(key, url, num=num))
     data = pd.DataFrame([[v['title'], v['date'], v['url']] for v in news], columns=['title', 'date', 'url'])
     data['date'] = pd.to_datetime(data.date)
-    data = data.sort_values(by='date')
+    data = data.sort_values(by='date', ascending=False)
 
     if save is not None:
         td = []
