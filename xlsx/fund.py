@@ -20,7 +20,8 @@ def imports(year, month, dir, d: engine):
     session = Session(d)
     companies = {v.code: v.id for v in session.execute(models.company.select()).all()}
     stocks = {v.code: v.id for v in session.execute(models.stock.select()).all()}
-    fundInfos = {v['基金名稱']: v['基金統編'] for v in cFund.info(year, month)}
+    m = "%02d" % month
+    fundInfos = {v['基金名稱']: v['基金統編'] for v in cFund.info(year, month)[f"{year}{m}"]}
 
     for p in paths:
         logging.info(f"read fund {p}")
