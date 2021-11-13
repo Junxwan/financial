@@ -917,6 +917,7 @@ async def google_news(keyWord, url, num=30):
             page = await browser.newPage()
 
             if url is None:
+                print('google new page end')
                 break
 
             await page.goto(url)
@@ -929,8 +930,11 @@ async def google_news(keyWord, url, num=30):
                 u = html.find('a').attrs['href']
                 meta = metadata_parser.MetadataParser(url=u, url_headers=HEADERS)
 
+                if len(meta.metadata['meta']) == 0:
+                    continue
+
                 hostName = urllib.parse.urlparse(u).hostname
-                if hostName in ['tw.stock.yahoo.com', 'tw.yahoo.com']:
+                if hostName in ['tw.stock.yahoo.com', 'tw.yahoo.com', 'tw.news.yahoo.com']:
                     t = meta.soup.find('time').attrs['datetime']
                 elif hostName == 'money.udn.com':
                     t = meta.metadata['meta']['date']
@@ -942,6 +946,16 @@ async def google_news(keyWord, url, num=30):
                     t = f"{meta.soup.find(class_='updatetime').text}:00"
                 elif hostName == 'www.moneydj.com':
                     t = f"{meta.soup.find(id='MainContent_Contents_lbDate').text}:00"
+                elif hostName == 'technews.tw':
+                    t = meta.soup.find_all(class_='body')[1].text.replace(' 年 ', '-').replace(' 月 ', '-').replace(' 日 ',
+                                                                                                                  ' ')
+                elif hostName == 'www.wealth.com.tw':
+                    p = await browser.newPage()
+                    await p.goto(u)
+                    t = BeautifulSoup(await p.content(), 'html.parser').find(class_='_1G3Lb').contents[0].text
+                    await p.close()
+                elif hostName == 'www.gvm.com.tw':
+                    t = meta.soup.find(class_='article-time').text
                 else:
                     t = meta.metadata['meta']['article:published_time']
 
@@ -962,6 +976,8 @@ async def google_news(keyWord, url, num=30):
                     url = None
 
             print(f'google new page {i + 1} news {len(news)}')
+
+            await page.close()
 
     except Exception as e:
         print(f'google new page error: {e.__str__()} url: {u}')

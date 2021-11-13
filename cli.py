@@ -1827,7 +1827,7 @@ def google_new(key, url, num, save):
                 '</tbody>'
                 '</table>')
 
-        f = open(os.path.join(save, f'{key}-news.html'), "w")
+        f = open(os.path.join(save, f'{key}-news.html'), "w", encoding="utf-8")
         f.write(html)
         f.close()
     else:
