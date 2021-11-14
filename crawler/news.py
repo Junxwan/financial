@@ -938,7 +938,8 @@ async def google_news(keyWord, url, num=30):
                     t = meta.soup.find('time').attrs['datetime']
                 elif hostName == 'money.udn.com':
                     t = meta.metadata['meta']['date']
-                elif hostName in ['finance.ettoday.net', 'www.chinatimes.com', 'wantrich.chinatimes.com']:
+                elif hostName in ['finance.ettoday.net', 'www.chinatimes.com', 'wantrich.chinatimes.com',
+                                  'www.ettoday.net']:
                     t = meta.metadata['meta']['pubdate']
                 elif hostName == 'www.bnext.com.tw':
                     t = meta.metadata['meta']['my:date']
@@ -956,6 +957,15 @@ async def google_news(keyWord, url, num=30):
                     await p.close()
                 elif hostName == 'www.gvm.com.tw':
                     t = meta.soup.find(class_='article-time').text
+                elif hostName == 'fnc.ebc.net.tw':
+                    ts = meta.soup.find(class_='small-gray-text').text.split(' ')
+                    t = f"{ts[0]} {ts[1]}:00"
+                elif hostName == 'finance.technews.tw':
+                    t = meta.soup.find(class_='entry-header').find_all(class_='body')[1].text.replace(' 年 ',
+                                                                                                      '-').replace(
+                        ' 月 ', '-').replace(' 日 ', ' ')
+                elif hostName in ['www.walkerland.com.tw']:
+                    continue
                 else:
                     t = meta.metadata['meta']['article:published_time']
 
