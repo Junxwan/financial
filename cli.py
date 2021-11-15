@@ -1140,6 +1140,29 @@ def export(type, out, date, config):
             index=False,
             encoding='utf_8_sig')
 
+    # cb漲幅分位數
+    elif (type == 'cb_increase_quantile'):
+        data = []
+        session = Session(d)
+        s = (
+            "SELECT * FROM ( "
+            "SELECT increase, @curRow:=@curRow + 1 AS number FROM cb_prices WHERE cb_id = :id ORDER BY increase DESC "
+            ") as p "
+            "WHERE p.number IN (1 , ROUND(@curRow / 2), ROUND(@curRow / 4), ROUND(@curRow / 10));"
+        )
+
+        for v in session.execute("SELECT id, code, name, start_date FROM cbs").all():
+            session.execute("SET @curRow = 0;")
+            increase = [v.increase for v in session.execute(s, {'id': v.id}).all()]
+
+            if len(increase) == 4:
+                data.append([v.code, v.name, v.start_date] + increase)
+
+        pd.DataFrame(data, columns=['increase', 'name', 'start_date', '1', '0.9', '0.75', '0.5']).to_csv(
+            os.path.join(out, 'cb_increase_quantile.csv'),
+            index=False,
+            encoding='utf_8_sig')
+
     # cbas價格分位數
     elif (type == 'cbas_quartile'):
         data = []
@@ -1199,6 +1222,7 @@ def export(type, out, date, config):
             index=False,
             encoding='utf_8_sig')
 
+    # cb市價區間折溢價分位數
     elif (type == 'cb_price_premium_quantile'):
         data = {
             'cb_close': [],
