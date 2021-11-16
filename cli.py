@@ -1125,17 +1125,17 @@ def export(type, out, date, config):
             "SELECT * FROM ( "
             "SELECT close, @curRow:=@curRow + 1 AS number FROM cb_prices WHERE cb_id = :id ORDER BY close DESC "
             ") as p "
-            "WHERE p.number IN (1 , ROUND(@curRow / 2), ROUND(@curRow / 4));"
+            "WHERE p.number IN (1, ROUND(@curRow / 2), ROUND(@curRow / 4), ROUND(@curRow / 10));"
         )
 
         for v in session.execute("SELECT id, code, name, start_date FROM cbs").all():
             session.execute("SET @curRow = 0;")
             close = [v.close for v in session.execute(s, {'id': v.id}).all()]
 
-            if len(close) == 3:
+            if len(close) == 4:
                 data.append([v.code, v.name, v.start_date] + close)
 
-        pd.DataFrame(data, columns=['code', 'name', 'start_date', 'max', 'sec', 'avg']).to_csv(
+        pd.DataFrame(data, columns=['code', 'name', 'start_date', '1', '0.9', '0.75', '0.5']).to_csv(
             os.path.join(out, 'cb_price_quartile.csv'),
             index=False,
             encoding='utf_8_sig')
@@ -1163,7 +1163,7 @@ def export(type, out, date, config):
             index=False,
             encoding='utf_8_sig')
 
-    # cbas價格分位數
+    # cbas拆解日市價分位數
     elif (type == 'cbas_quartile'):
         data = []
         session = Session(d)
@@ -1183,6 +1183,31 @@ def export(type, out, date, config):
 
         pd.DataFrame(data, columns=['code', 'name', 'start_date', 'close']).to_csv(
             os.path.join(out, 'cbas_quartile.csv'),
+            index=False,
+            encoding='utf_8_sig')
+
+    # cbas拆解日漲幅分位數
+    elif (type == 'cbas_increase_quartile'):
+        data = []
+        session = Session(d)
+        s = (
+            "SELECT * FROM ( "
+            "SELECT increase, volume, @curRow:=@curRow + 1 AS number FROM cb_prices WHERE cb_id = :id ORDER BY date "
+            ") as p "
+            "WHERE p.number = 6;"
+        )
+
+        for v in session.execute("SELECT id, code, publish_total_amount, name, start_date FROM cbs").all():
+            session.execute("SET @curRow = 0;")
+            d = session.execute(s, {'id': v.id}).first()
+
+            if d is not None:
+                data.append([v.code, v.name, v.start_date, d.increase, d.volume, v.publish_total_amount,
+                             round((d.volume / (v.publish_total_amount / 100000)) * 100, 2)])
+
+        pd.DataFrame(data, columns=['code', 'name', 'start_date', 'increase', 'volume', 'publish_total_amount',
+                                    'cbas_rate']).to_csv(
+            os.path.join(out, 'cbas_increase_quartile.csv'),
             index=False,
             encoding='utf_8_sig')
 
