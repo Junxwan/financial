@@ -1718,7 +1718,7 @@ def line(config):
                     f"\n代碼: {v.code}\n名稱: {v.name}\n日期: {date}\n預估cbas拆解: {round((v.volume / (v.publish_total_amount / 100000)) * 100)}%"
                 )
 
-    # 突破轉換價
+    # 突破或接近轉換價
     def c():
         yData = session.execute(
             "SELECT date FROM prices GROUP BY date ORDER BY date DESC LIMIT 1 OFFSET 1").first().date.__str__()
@@ -1755,6 +1755,10 @@ def line(config):
             if values[0].close < cp and values[1].close >= cp:
                 message.append(
                     f'\n代碼: {code}\n名稱: {values[0].name}\n日期: {date}\n收盤價: {values[1].close}\n突破轉換價: {cp}'
+                )
+            elif cp > values[1].close and (values[1].close * 1.06) >= cp:
+                message.append(
+                    f'\n代碼: {code}\n名稱: {values[0].name}\n日期: {date}\n收盤價: {values[1].close}\n轉換價: {cp}\n接近轉換價'
                 )
 
     # 今天上市
