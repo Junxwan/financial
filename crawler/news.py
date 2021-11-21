@@ -943,8 +943,6 @@ async def google_news(keyWord, url, num=30):
                     t = meta.metadata['meta']['pubdate']
                 elif hostName == 'www.bnext.com.tw':
                     t = meta.metadata['meta']['my:date']
-                elif hostName == 'www.cna.com.tw':
-                    t = f"{meta.soup.find(class_='updatetime').text}:00"
                 elif hostName == 'www.moneydj.com':
                     t = f"{meta.soup.find(id='MainContent_Contents_lbDate').text}:00"
                 elif hostName == 'technews.tw':
@@ -964,7 +962,15 @@ async def google_news(keyWord, url, num=30):
                     t = meta.soup.find(class_='entry-header').find_all(class_='body')[1].text.replace(' 年 ',
                                                                                                       '-').replace(
                         ' 月 ', '-').replace(' 日 ', ' ')
-                elif hostName in ['www.walkerland.com.tw']:
+                elif hostName == 'www.ithome.com.tw':
+                    t = meta.soup.find(class_='created').text
+                elif hostName in ['hk.jrj.com.cn', 'inews.hket.com', 'www.aastocks.com', 'www.quamnet.com',
+                                  'www.businessweekly.com.tw', 'style.udn.com', 'health.udn.com', 'gnn.gamer.com.tw',
+                                  'news.tvbs.com.tw', 'www.finet.hk', 'www.walkerland.com.tw', 'health.ltn.com.tw',
+                                  'video.udn.com', 'www.1111.com.tw', 'invest.hket.com', 'www.cna.com.tw',
+                                  'www.businesswirechina.com', 'www.4gamers.com.tw', 'www.digitimes.com.tw',
+                                  'www.ctwant.com', 'www.youtube.com', 'turnnewsapp.com',
+                                  'wealth.businessweekly.com.tw']:
                     continue
                 else:
                     t = meta.metadata['meta']['article:published_time']
