@@ -928,7 +928,12 @@ async def google_news(keyWord, url, num=30):
                     continue
 
                 u = html.find('a').attrs['href']
-                meta = metadata_parser.MetadataParser(url=u, url_headers=HEADERS)
+
+                try:
+                    meta = metadata_parser.MetadataParser(url=u, url_headers=HEADERS)
+                except Exception as e:
+                    print(f'error google new page {i + 1} url: {u} error: {e.__str__()}')
+                    continue
 
                 if len(meta.metadata['meta']) == 0:
                     continue
@@ -964,13 +969,18 @@ async def google_news(keyWord, url, num=30):
                         ' 月 ', '-').replace(' 日 ', ' ')
                 elif hostName == 'www.ithome.com.tw':
                     t = meta.soup.find(class_='created').text
+                elif hostName == 'www.businessweekly.com.tw':
+                    t = meta.metadata['meta']['lastmod']
+                elif hostName == 'ubrand.udn.com':
+                    t = meta.metadata['meta']['date.available']
                 elif hostName in ['hk.jrj.com.cn', 'inews.hket.com', 'www.aastocks.com', 'www.quamnet.com',
                                   'www.businessweekly.com.tw', 'style.udn.com', 'health.udn.com', 'gnn.gamer.com.tw',
                                   'news.tvbs.com.tw', 'www.finet.hk', 'www.walkerland.com.tw', 'health.ltn.com.tw',
                                   'video.udn.com', 'www.1111.com.tw', 'invest.hket.com', 'www.cna.com.tw',
                                   'www.businesswirechina.com', 'www.4gamers.com.tw', 'www.digitimes.com.tw',
-                                  'www.ctwant.com', 'www.youtube.com', 'turnnewsapp.com',
-                                  'wealth.businessweekly.com.tw']:
+                                  'www.ctwant.com', 'www.youtube.com', 'turnnewsapp.com', 'blog.housetube.tw',
+                                  'wealth.businessweekly.com.tw', 'times.hinet.net', 'www.cw.com.tw',
+                                  'www.foodnext.net']:
                     continue
                 else:
                     t = meta.metadata['meta']['article:published_time']
