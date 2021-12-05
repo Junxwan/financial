@@ -16,11 +16,11 @@ import crawler.cmoney as cmoney
 import crawler.news as cnews
 import crawler.fund as cFund
 import crawler.cb as cb
+import crawler.report as report
 import pandas as pd
 from api import line
 from bs4 import BeautifulSoup
 from models import models
-
 from sqlalchemy.orm import Session
 from sqlalchemy import create_engine
 from configparser import ConfigParser

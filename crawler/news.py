@@ -2,12 +2,10 @@ import json
 import requests
 import metadata_parser
 import time
-import asyncio
 import feedparser
 import pytz
 import urllib.parse
 from datetime import datetime as dt
-from datetime import timedelta
 from dateutil import parser
 from bs4 import BeautifulSoup
 from pyppeteer import launch
