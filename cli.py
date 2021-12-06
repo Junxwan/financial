@@ -507,6 +507,8 @@ def bargaining_chip(date, config, notify):
         else:
             date = datetime.fromtimestamp(parser.parse(date).timestamp(), tz=TIMEZONE)
 
+        log(f"start bargaining_chip date: {date}")
+
         stock = {v.code: v.id for v in session.execute("SELECT id, code FROM stocks").all()}
         update = []
 
