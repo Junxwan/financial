@@ -520,6 +520,7 @@ def bargaining_chip(date, config, notify):
                 update.append(f"WHEN {stock[v['code']]} THEN {v['securities_lending_repay']}")
 
         if len(update) == 0:
+            log(f"start bargaining_chip date: {date} count:0")
             return
 
         result = session.execute(
