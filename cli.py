@@ -885,6 +885,7 @@ def news(hours, save=False, notify=False):
             ['工商時報-科技', cnews.ctee(date, 'kj')],
             ['工商時報-國際', cnews.ctee(date, 'gj')],
             ['工商時報-兩岸', cnews.ctee(date, 'lm')],
+            ['工商時報-證券', cnews.cteeCategory(date, 'stock')],
 
             ['鉅亨網-台股', cnews.cnyes(date, 'tw_stock')],
             ['鉅亨網-國際股', cnews.cnyes(date, 'wd_stock')],

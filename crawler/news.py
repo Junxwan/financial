@@ -448,6 +448,48 @@ def ctee(end_date, type):
     return news
 
 
+# 工商時報
+# https://ctee.com.tw/category/news/stocks (證卷)
+def cteeCategory(end_date, type):
+    news = []
+    isRun = True
+    page = 1
+
+    while isRun:
+        if page >= LIMIT:
+            break
+
+        r = requests.get(
+            f"https://ctee.com.tw/category/news/{type}/page/{page}",
+            headers=HEADERS
+        )
+
+        if r.status_code != 200:
+            break
+
+        soup = BeautifulSoup(r.text, 'html.parser')
+
+        for v in soup.find_all('article'):
+            date = dt.fromtimestamp(parser.parse(v.find('time').attrs['datetime']).timestamp()).strftime(
+                '%Y-%m-%d %H:%M:%S')
+
+            if date <= end_date:
+                isRun = False
+                break
+
+            news.append({
+                'title': str(v.find(class_='title').text).strip(),
+                'url': v.find('a').attrs['href'],
+                'date': date,
+            })
+
+        page = page + 1
+
+        time.sleep(1)
+
+    return news
+
+
 # 工商時報文章內容
 def ctee_context(url):
     r = requests.get(url, headers=HEADERS)
