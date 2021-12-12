@@ -77,3 +77,6 @@ bargaining_chip:
 # Line通知
 line:
 	$(CLI) line
+
+news:
+	$(CLI) news -h 2 -s true -n $(NOTIFY)
