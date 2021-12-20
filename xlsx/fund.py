@@ -26,8 +26,8 @@ def imports(year, month, dir, d: engine):
     for p in paths:
         logging.info(f"read fund {p}")
 
-        for name, v in pd.read_csv(p).groupby('c_name'):
-            code = v.iloc[0]['c_code']
+        for name, value in pd.read_csv(p).groupby('c_name'):
+            code = value.iloc[0]['c_code']
             if code not in companies:
                 result = session.execute(models.company.insert(), {'name': name, 'code': code})
 
@@ -43,7 +43,7 @@ def imports(year, month, dir, d: engine):
             id = companies[code]
 
             # 基金
-            funds = list(v.groupby('f_name').f_name.indices)
+            funds = list(value.groupby('f_name').f_name.indices)
             funds = set(funds).difference(
                 [v.name for v in session.execute(models.fund.select()).all() if v.name in funds]
             )
@@ -87,7 +87,7 @@ def imports(year, month, dir, d: engine):
                      }).all()
                  ]
 
-            for i, data in v.iterrows():
+            for i, data in value.iterrows():
                 if data['f_name'] not in funds or data['code'] not in stocks:
                     continue
 
