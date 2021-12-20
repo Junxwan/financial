@@ -1020,7 +1020,7 @@ async def google_news(keyWord, url, num=30):
                                   'www.businesswirechina.com', 'www.4gamers.com.tw', 'www.digitimes.com.tw',
                                   'www.ctwant.com', 'www.youtube.com', 'turnnewsapp.com', 'blog.housetube.tw',
                                   'wealth.businessweekly.com.tw', 'times.hinet.net', 'www.cw.com.tw',
-                                  'www.foodnext.net']:
+                                  'www.foodnext.net', 'estate.ltn.com.tw', 'house.udn.com', 'finance.ce.cn']:
                     continue
                 else:
                     t = meta.metadata['meta']['article:published_time']
