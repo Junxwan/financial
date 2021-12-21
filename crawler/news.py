@@ -637,7 +637,7 @@ def moneydj(end_date, type):
 
         r = requests.get(
             f"https://www.moneydj.com/kmdj/news/newsreallist.aspx?index1={page}&a={type}",
-            headers=HEADERS
+            headers=HEADERS,verify=False
         )
 
         if r.status_code != 200:
