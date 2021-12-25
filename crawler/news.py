@@ -637,7 +637,7 @@ def moneydj(end_date, type):
 
         r = requests.get(
             f"https://www.moneydj.com/kmdj/news/newsreallist.aspx?index1={page}&a={type}",
-            headers=HEADERS,verify=False
+            headers=HEADERS, verify=False
         )
 
         if r.status_code != 200:
@@ -996,7 +996,11 @@ async def google_news(keyWord, url, num=30):
                 elif hostName == 'www.wealth.com.tw':
                     p = await browser.newPage()
                     await p.goto(u)
-                    t = BeautifulSoup(await p.content(), 'html.parser').find(class_='_1G3Lb').contents[0].text
+                    t = BeautifulSoup(await p.content(), 'html.parser').find(class_='_1G3Lb')
+                    if t is None:
+                        continue
+
+                    t = t.contents[0].text
                     await p.close()
                 elif hostName == 'www.gvm.com.tw':
                     t = meta.soup.find(class_='article-time').text
@@ -1020,7 +1024,8 @@ async def google_news(keyWord, url, num=30):
                                   'www.businesswirechina.com', 'www.4gamers.com.tw', 'www.digitimes.com.tw',
                                   'www.ctwant.com', 'www.youtube.com', 'turnnewsapp.com', 'blog.housetube.tw',
                                   'wealth.businessweekly.com.tw', 'times.hinet.net', 'www.cw.com.tw',
-                                  'www.foodnext.net', 'estate.ltn.com.tw', 'house.udn.com', 'finance.ce.cn']:
+                                  'www.foodnext.net', 'estate.ltn.com.tw', 'house.udn.com', 'finance.ce.cn',
+                                  'm.pjtime.com', 'www.pjtime.com', 'www.city.mitoyo.lg.jp', 'www.nara-np.co.jp']:
                     continue
                 else:
                     t = meta.metadata['meta']['article:published_time']
