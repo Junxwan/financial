@@ -963,7 +963,7 @@ async def google_news(keyWord, url, num=30):
             await page.goto(url)
             soup = BeautifulSoup(await page.content(), 'html.parser')
             for html in soup.find_all(class_='ftSUBd'):
-                title = str(html.find(class_='iRPxbe').contents[2].text)
+                title = str(html.find(class_='iRPxbe').contents[1].text)
                 if title.find(keyWord) < 0:
                     continue
 
@@ -1013,8 +1013,6 @@ async def google_news(keyWord, url, num=30):
                         ' 月 ', '-').replace(' 日 ', ' ')
                 elif hostName == 'www.ithome.com.tw':
                     t = meta.soup.find(class_='created').text
-                elif hostName == 'www.businessweekly.com.tw':
-                    t = meta.metadata['meta']['lastmod']
                 elif hostName == 'ubrand.udn.com':
                     t = meta.metadata['meta']['date.available']
                 elif hostName in ['hk.jrj.com.cn', 'inews.hket.com', 'www.aastocks.com', 'www.quamnet.com',
@@ -1025,7 +1023,11 @@ async def google_news(keyWord, url, num=30):
                                   'www.ctwant.com', 'www.youtube.com', 'turnnewsapp.com', 'blog.housetube.tw',
                                   'wealth.businessweekly.com.tw', 'times.hinet.net', 'www.cw.com.tw',
                                   'www.foodnext.net', 'estate.ltn.com.tw', 'house.udn.com', 'finance.ce.cn',
-                                  'm.pjtime.com', 'www.pjtime.com', 'www.city.mitoyo.lg.jp', 'www.nara-np.co.jp']:
+                                  'm.pjtime.com', 'www.pjtime.com', 'www.city.mitoyo.lg.jp', 'www.nara-np.co.jp',
+                                  'www.businessweekly.com.tw', 'orange.udn.com', 'ah.people.com.cn',
+                                  'www.cmmedia.com.tw', 'site.eettaiwan.com', 'live.setn.com', 'www.msn.com',
+                                  'smart.businessweekly.com.tw', 'motor-fan.jp', 'ps.hket.com', 'paper.hket.com',
+                                  'm.cnyes.com', 'www.nna.jp', 'm.moneydj.com', 'house.ettoday.net']:
                     continue
                 else:
                     t = meta.metadata['meta']['article:published_time']
