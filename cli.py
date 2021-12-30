@@ -850,13 +850,7 @@ def get_fund(year, month, id, out, save, config, notify):
 @click.option('-s', '--save', type=click.BOOL, help="是否保存在db")
 @click.option('-n', '--notify', default=False, type=click.BOOL, help="通知")
 def news(hours, save=False, notify=False):
-    try:
-        tz = pytz.timezone('Asia/Taipei')
-        now = datetime.now(tz)
-        date = (now - timedelta(hours=hours)).strftime("%Y-%m-%d %H:%M:%S")
-
-        log(f"start news {date}")
-
+    def get_news(date, save, notify):
         data = [
             ['聯合報-產經', cnews.udn('6644', date)],
             ['聯合報-股市', cnews.udn('6645', date)],
@@ -906,8 +900,6 @@ def news(hours, save=False, notify=False):
             ['dramx', cnews.dramx(date)],
         ]
 
-        log('get news ok')
-
         if save:
             db = conf['databases']
             engine = create_engine(
@@ -945,11 +937,26 @@ def news(hours, save=False, notify=False):
                 if notify:
                     notifyApi.sendSystem(f"執行收集 新聞")
 
+    tz = pytz.timezone('Asia/Taipei')
+    now = datetime.now(tz)
+    date = (now - timedelta(hours=hours)).strftime("%Y-%m-%d %H:%M:%S")
+
+    try:
+        log(f"start news {date}")
+
+        get_news(date, save, notify)
+
+        log('get news ok')
+
     except Exception as e:
         error(f"new error {e.__str__()}")
 
         if notify:
             setEmail(f"系統通知錯誤 新聞", f"{e.__str__()}")
+
+        get_news(date, save, notify)
+
+        log('report news ok')
 
 
 # 即時重大公告
