@@ -1027,7 +1027,8 @@ async def google_news(keyWord, url, num=30):
                                   'www.businessweekly.com.tw', 'orange.udn.com', 'ah.people.com.cn',
                                   'www.cmmedia.com.tw', 'site.eettaiwan.com', 'live.setn.com', 'www.msn.com',
                                   'smart.businessweekly.com.tw', 'motor-fan.jp', 'ps.hket.com', 'paper.hket.com',
-                                  'm.cnyes.com', 'www.nna.jp', 'm.moneydj.com', 'house.ettoday.net']:
+                                  'm.cnyes.com', 'www.nna.jp', 'm.moneydj.com', 'house.ettoday.net', 'www.idn.com.tw',
+                                  'star.ettoday.net']:
                     continue
                 else:
                     t = meta.metadata['meta']['article:published_time']
