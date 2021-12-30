@@ -132,27 +132,27 @@ def findByUrl(url):
 def conversionPrice(code):
     data = []
 
-    r = requests.post("https://mops.twse.com.tw/mops/web/ajax_t120sg06", {
-        'encodeURIComponent': 1,
-        'firstin': True,
-        'bond_id': code,
-        'step': 1,
-        'data_type': '',
-        'date1': '',
-        'date2': '',
-    }, headers=HEADERS)
-    r.encoding = 'utf-8'
-
-    type = {
-        '掛牌': 1,
-        '反稀釋': 2,
-        '重設': 3,
-        '不重設': 4,
-        '特別重設': 5,
-        '不特別重設': 6,
-    }
-
     try:
+        r = requests.post("https://mops.twse.com.tw/mops/web/ajax_t120sg06", {
+            'encodeURIComponent': 1,
+            'firstin': True,
+            'bond_id': code,
+            'step': 1,
+            'data_type': '',
+            'date1': '',
+            'date2': '',
+        }, headers=HEADERS)
+        r.encoding = 'utf-8'
+
+        type = {
+            '掛牌': 1,
+            '反稀釋': 2,
+            '重設': 3,
+            '不重設': 4,
+            '特別重設': 5,
+            '不特別重設': 6,
+        }
+
         eDates = []
         for index, value in pd.read_html(StringIO(r.text))[0].iterrows():
             dates = value['重設日期(起迄日期)'].split('/')
