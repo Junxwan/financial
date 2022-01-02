@@ -649,8 +649,12 @@ def moneydj(end_date, type):
         for v in soup.find('table', class_='forumgrid').find_all('tr'):
             if v.text.strip() == '時間標題人氣':
                 continue
-            v.find('a')
-            date = f"{y}-{v.contents[1].text.strip()[:2]}-{v.contents[1].text.strip()[3:5]} {v.contents[1].text.strip()[6:11]}:00"
+
+            m = int(v.contents[1].text.strip()[:2])
+            if m == 12:
+                y = 2021
+
+            date = f"{y}-{m}-{v.contents[1].text.strip()[3:5]} {v.contents[1].text.strip()[6:11]}:00"
 
             if date <= end_date:
                 isRun = False
@@ -1015,23 +1019,12 @@ async def google_news(keyWord, url, num=30):
                     t = meta.soup.find(class_='created').text
                 elif hostName == 'ubrand.udn.com':
                     t = meta.metadata['meta']['date.available']
-                elif hostName in ['hk.jrj.com.cn', 'inews.hket.com', 'www.aastocks.com', 'www.quamnet.com',
-                                  'www.businessweekly.com.tw', 'style.udn.com', 'health.udn.com', 'gnn.gamer.com.tw',
-                                  'news.tvbs.com.tw', 'www.finet.hk', 'www.walkerland.com.tw', 'health.ltn.com.tw',
-                                  'video.udn.com', 'www.1111.com.tw', 'invest.hket.com', 'www.cna.com.tw',
-                                  'www.businesswirechina.com', 'www.4gamers.com.tw', 'www.digitimes.com.tw',
-                                  'www.ctwant.com', 'www.youtube.com', 'turnnewsapp.com', 'blog.housetube.tw',
-                                  'wealth.businessweekly.com.tw', 'times.hinet.net', 'www.cw.com.tw',
-                                  'www.foodnext.net', 'estate.ltn.com.tw', 'house.udn.com', 'finance.ce.cn',
-                                  'm.pjtime.com', 'www.pjtime.com', 'www.city.mitoyo.lg.jp', 'www.nara-np.co.jp',
-                                  'www.businessweekly.com.tw', 'orange.udn.com', 'ah.people.com.cn',
-                                  'www.cmmedia.com.tw', 'site.eettaiwan.com', 'live.setn.com', 'www.msn.com',
-                                  'smart.businessweekly.com.tw', 'motor-fan.jp', 'ps.hket.com', 'paper.hket.com',
-                                  'm.cnyes.com', 'www.nna.jp', 'm.moneydj.com', 'house.ettoday.net', 'www.idn.com.tw',
-                                  'star.ettoday.net']:
-                    continue
+
                 else:
-                    t = meta.metadata['meta']['article:published_time']
+                    if 'article:published_time' not in meta.metadata['meta']:
+                        continue
+                    else:
+                        t = meta.metadata['meta']['article:published_time']
 
                 news.append({
                     'url': u,
