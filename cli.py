@@ -984,18 +984,19 @@ def lineNews(notify):
         get(keys)
 
     except Exception as e:
-        error(f"line-news error {e.__str__()}")
-
-        if notify:
-            setEmail(f"系統通知錯誤 Line新聞通知", f"{e.__str__()}")
-
         time.sleep(5 * 60)
 
-        log('re line news')
+        try:
+            log('re line news')
 
-        get(keys)
+            get(keys)
 
-        log('re line news ok')
+            log('re line news ok')
+        except Exception as e:
+            error(f"line-news error {e.__str__()}")
+
+            if notify:
+                setEmail(f"系統通知錯誤 Line新聞通知", f"{e.__str__()}")
 
 
 # 新聞
