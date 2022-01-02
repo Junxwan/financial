@@ -357,7 +357,7 @@ def season_codes(year, season):
 
 
 # 即時重大訊息 https://mops.twse.com.tw/mops/web/t05sr01_1
-def news(keys: dict):
+def news(keys: dict, hours=1):
     news = []
     r = requests.get(
         "https://mops.twse.com.tw/mops/web/t05sr01_1",
@@ -374,7 +374,7 @@ def news(keys: dict):
 
     news = []
     tz = pytz.timezone('Asia/Taipei')
-    end_date = (datetime.datetime.now(tz) - datetime.timedelta(hours=1)).strftime("%Y-%m-%d %H:%M:%S")
+    end_date = (datetime.datetime.now(tz) - datetime.timedelta(hours=hours)).strftime("%Y-%m-%d %H:%M:%S")
 
     for v in data.findAll("tr")[1:]:
         v = v.findAll("td")

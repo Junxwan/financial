@@ -967,9 +967,7 @@ def lineNews(notify):
 
     log('line news')
 
-    try:
-        keys = {v.name: v.ks.split(',') for v in d.execute('SELECT name, `keys` as ks FROM news_key_words').all()}
-
+    def get(keys):
         data = [
             twse.news(keys)
         ]
@@ -978,11 +976,24 @@ def lineNews(notify):
             for v in news:
                 notifyApi.sendNews(v['body'])
 
+    keys = []
+
+    try:
+        keys = {v.name: v.ks.split(',') for v in d.execute('SELECT name, `keys` as ks FROM news_key_words').all()}
+
+        get(keys)
+
     except Exception as e:
         error(f"line-news error {e.__str__()}")
 
         if notify:
             setEmail(f"系統通知錯誤 Line新聞通知", f"{e.__str__()}")
+
+        time.sleep(5 * 60)
+
+        get(keys)
+
+        log('re line news')
 
 
 # 新聞
