@@ -991,9 +991,11 @@ def lineNews(notify):
 
         time.sleep(5 * 60)
 
+        log('re line news')
+
         get(keys)
 
-        log('re line news')
+        log('re line news ok')
 
 
 # 新聞
