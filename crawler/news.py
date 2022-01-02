@@ -426,10 +426,16 @@ def ctee(end_date, type):
 
         soup = BeautifulSoup(r.text, 'html.parser')
         year = soup.find(class_='topbar-date').text.split('.')[0]
+        now = time.time()
 
         for v in soup.find_all(class_='item-content'):
             d = f"{year}/{v.find_all('a')[1].contents[1].text.replace('|', '').strip()}"
-            date = dt.fromtimestamp(parser.parse(d).timestamp()).strftime('%Y-%m-%d %H:%M:%S')
+            t = parser.parse(d).timestamp()
+
+            if (t - now) >= 100000:
+                continue
+
+            date = dt.fromtimestamp(t).strftime('%Y-%m-%d %H:%M:%S')
 
             if date <= end_date:
                 isRun = False
