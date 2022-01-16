@@ -656,11 +656,10 @@ def moneydj(end_date, type):
             if v.text.strip() == '時間標題人氣':
                 continue
 
-            m = int(v.contents[1].text.strip()[:2])
-            if m == 12:
+            if int(v.contents[1].text.strip()[:2]) == 12:
                 y = 2021
 
-            date = f"{y}-{m}-{v.contents[1].text.strip()[3:5]} {v.contents[1].text.strip()[6:11]}:00"
+            date = f"{y}-{v.contents[1].text.strip()[:2]}-{v.contents[1].text.strip()[3:5]} {v.contents[1].text.strip()[6:11]}:00"
 
             if date <= end_date:
                 isRun = False
