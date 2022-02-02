@@ -98,38 +98,38 @@ def imports(type, year, month=None, quarterly=None, dir=None, d: engine = None):
                     elif type == 'changes_in_equity':
                         changes_in_equity(insert, year, quarterly, d)
 
-                if type == 'consolidated_income_statement':
-                    deleteFinancial(
-                        'consolidated_income_statement',
-                        dir,
-                        year - 1, quarterly,
-                        consolidated_income_statement(data, year, quarterly, d),
-                        models.profit
-                    )
-                elif type == 'balance_sheet':
-                    deleteFinancial(
-                        'balance_sheet',
-                        dir,
-                        year - 1, quarterly,
-                        balance_sheet(data, year, quarterly, d),
-                        models.assetsDebt
-                    )
-                elif type == 'cash_flow_statement':
-                    deleteFinancial(
-                        'cash_flow_statement',
-                        dir,
-                        year - 1, quarterly,
-                        cash_flow_statement(data, year, quarterly, d),
-                        models.cash
-                    )
-                elif type == 'changes_in_equity':
-                    deleteFinancial(
-                        'changes_in_equity',
-                        dir,
-                        year - 1, quarterly,
-                        changes_in_equity(data, year, quarterly, d),
-                        models.equity
-                    )
+                # if type == 'consolidated_income_statement':
+                #     deleteFinancial(
+                #         'consolidated_income_statement',
+                #         dir,
+                #         year - 1, quarterly,
+                #         consolidated_income_statement(data, year, quarterly, d),
+                #         models.profit
+                #     )
+                # elif type == 'balance_sheet':
+                #     deleteFinancial(
+                #         'balance_sheet',
+                #         dir,
+                #         year - 1, quarterly,
+                #         balance_sheet(data, year, quarterly, d),
+                #         models.assetsDebt
+                #     )
+                # elif type == 'cash_flow_statement':
+                #     deleteFinancial(
+                #         'cash_flow_statement',
+                #         dir,
+                #         year - 1, quarterly,
+                #         cash_flow_statement(data, year, quarterly, d),
+                #         models.cash
+                #     )
+                # elif type == 'changes_in_equity':
+                #     deleteFinancial(
+                #         'changes_in_equity',
+                #         dir,
+                #         year - 1, quarterly,
+                #         changes_in_equity(data, year, quarterly, d),
+                #         models.equity
+                #     )
 
 
 # 綜合損益表
