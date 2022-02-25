@@ -1912,5 +1912,108 @@ def google_new(key, url, num, save):
         print(news)
 
 
+# 期權總成本
+@cli.command('key_price')
+@click.option('-i', '--input', type=click.STRING, help="file")
+@click.option('-o', '--out', type=click.STRING, help="save path")
+@click.option('-t', '--type', default='futures', type=click.Choice(['futures', 'op'], case_sensitive=False),
+              help="類型成本")
+def key_price(input, out, type):
+    data = pd.read_csv(input, encoding='big5-hkscs')
+    keyPrice = []
+    out = os.path.join(out, f"{type}_key_price.csv")
+
+    if type == 'futures':
+        data = data[data["商品代號"] == 'TX     ']
+        dates = data['成交日期'].unique().tolist()
+
+        for name in data['到期月份(週別)'].unique().tolist():
+            nameV = data[data['到期月份(週別)'] == name]
+            for date in dates:
+                dateV = nameV[nameV['成交日期'] == date]
+
+                for time in [[84500, 134500], [84500, 133000], [90000, 134500], [90000, 133000], [150000, 235959],
+                             [0, 45959]]:
+                    num = 0
+                    money = 0
+
+                    price = dateV[dateV['成交時間'] >= time[0]]
+                    for i, row in price[price['成交時間'] <= time[1]].iterrows():
+                        num += row['成交數量(B+S)']
+                        money += row['成交價格'] * row['成交數量(B+S)']
+
+                    keyPrice.append([name, date, time, money, num])
+
+        pd.DataFrame(keyPrice, columns=['name', 'date', 'time', 'money', 'num']).to_csv(out, index=False,
+                                                                                        encoding='utf_8_sig')
+    elif type == 'op':
+        data = data[data["          商品代號"] == '    TXO     ']
+        data[' 成交日期'] = pd.to_numeric(data[' 成交日期'], errors='coerce')
+        dates = data[' 成交日期'].unique().tolist()[:2]
+        prices = data['        履約價格'].unique().tolist()
+        names = data['                                                      到期月份(週別)'].unique().tolist()
+
+        for date in dates:
+            vData = data[data[' 成交日期'] == int(date)]
+            for name in names:
+                vName = vData[vData["                                                      到期月份(週別)"] == name]
+                for price in prices:
+                    pData = vName[vName['        履約價格'] == price]
+                    for cp in ['    P     ', '    C     ']:
+                        cpData = pData[pData['        買賣權別'] == cp]
+                        for time in [[84500, 134500], [84500, 133000], [90000, 134500], [90000, 133000]]:
+                            v = cpData[cpData['      成交時間'] >= time[0]]
+                            v = v[v['      成交時間'] <= time[1]]
+                            n = 0
+                            s = v['         成交數量(B or S)'].sum()
+                            for i, row in v.iterrows():
+                                n += row['         成交數量(B or S)'] * row['          成交價格']
+
+                            keyPrice.append([
+                                int(date), name.strip(), int(price), cp.strip(), time, n, s
+                            ])
+
+        pd.DataFrame(keyPrice, columns=['date', 'name', 'price', 'c/p', 'time', 'money', 'num']).to_csv(out,
+                                                                                                        index=False,
+                                                                                                        encoding='utf_8_sig')
+
+
+# op未平倉
+@cli.command('op_position')
+@click.option('-p', '--period', type=click.STRING, help="期數")
+@click.option('-i', '--input', type=click.STRING, help="file")
+@click.option('-o', '--out', type=click.STRING, help="save path")
+def op_position(period, input, out):
+    data = pd.read_csv(input, encoding='big5-hkscs', index_col=False)
+    data = data[data["契約"] == 'TXO']
+    data = data[data["到期月份(週別)"] == period]
+    data = data[data["交易時段"] == '一般']
+    dates = data['交易日期'].unique().tolist()
+    prices = data['履約價'].unique().tolist()
+    dates.reverse()
+    opPosition = []
+
+    for price in prices:
+        v = [price]
+        vPrice = data[data['履約價'] == price]
+        for date in dates:
+            vDate = vPrice[vPrice['交易日期'] == date]
+
+            if len(vDate) == 0:
+                v.insert(0, 0)
+                v.append(0)
+                continue
+
+            v.insert(0, vDate.iloc[0]['未沖銷契約數'])
+            v.append(vDate.iloc[1]['未沖銷契約數'])
+
+        opPosition.append(v)
+
+    d = dates.copy()
+    d.reverse()
+    columns = d + [''] + dates
+    pd.DataFrame(opPosition, columns=columns).to_csv(out, index=False, encoding='utf_8_sig')
+
+
 if __name__ == '__main__':
     cli()
